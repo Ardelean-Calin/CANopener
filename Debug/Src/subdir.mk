@@ -6,7 +6,6 @@
 C_SRCS += \
 ../Src/freertos.c \
 ../Src/main.c \
-../Src/state_machine.c \
 ../Src/stm32f3xx_hal_msp.c \
 ../Src/stm32f3xx_hal_timebase_TIM.c \
 ../Src/stm32f3xx_it.c \
@@ -19,7 +18,6 @@ C_SRCS += \
 OBJS += \
 ./Src/freertos.o \
 ./Src/main.o \
-./Src/state_machine.o \
 ./Src/stm32f3xx_hal_msp.o \
 ./Src/stm32f3xx_hal_timebase_TIM.o \
 ./Src/stm32f3xx_it.o \
@@ -32,7 +30,6 @@ OBJS += \
 C_DEPS += \
 ./Src/freertos.d \
 ./Src/main.d \
-./Src/state_machine.d \
 ./Src/stm32f3xx_hal_msp.d \
 ./Src/stm32f3xx_hal_timebase_TIM.d \
 ./Src/stm32f3xx_it.d \
@@ -48,7 +45,7 @@ Src/%.o: ../Src/%.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: MCU GCC Compiler'
 	@echo $(PWD)
-	arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 '-D__weak=__attribute__((weak))' '-D__packed=__attribute__((__packed__))' -DUSE_HAL_DRIVER -DSTM32F303xC -I"C:/Users/Ardelean Calin/OneDrive/Programming_Embedded/OpenCAN/Inc" -I"C:/Users/Ardelean Calin/OneDrive/Programming_Embedded/OpenCAN/Drivers/STM32F3xx_HAL_Driver/Inc" -I"C:/Users/Ardelean Calin/OneDrive/Programming_Embedded/OpenCAN/Drivers/STM32F3xx_HAL_Driver/Inc/Legacy" -I"C:/Users/Ardelean Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F" -I"C:/Users/Ardelean Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/ST/STM32_USB_Device_Library/Core/Inc" -I"C:/Users/Ardelean Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc" -I"C:/Users/Ardelean Calin/OneDrive/Programming_Embedded/OpenCAN/Drivers/CMSIS/Device/ST/STM32F3xx/Include" -I"C:/Users/Ardelean Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include" -I"C:/Users/Ardelean Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS" -I"C:/Users/Ardelean Calin/OneDrive/Programming_Embedded/OpenCAN/Drivers/CMSIS/Include"  -Og -g3 -Wall -fmessage-length=0 -ffunction-sections -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -o "$@" "$<"
+	arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 '-D__weak=__attribute__((weak))' '-D__packed=__attribute__((__packed__))' -DUSE_HAL_DRIVER -DSTM32F303xC -I"C:/Users/Ardelean Calin/OneDrive/Programming_Embedded/OpenCAN/Inc" -I"C:/Users/Ardelean Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include" -I"C:/Users/Ardelean Calin/OneDrive/Programming_Embedded/OpenCAN/Drivers/STM32F3xx_HAL_Driver/Inc" -I"C:/Users/Ardelean Calin/OneDrive/Programming_Embedded/OpenCAN/Drivers/STM32F3xx_HAL_Driver/Inc/Legacy" -I"C:/Users/Ardelean Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F" -I"C:/Users/Ardelean Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/ST/STM32_USB_Device_Library/Core/Inc" -I"C:/Users/Ardelean Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc" -I"C:/Users/Ardelean Calin/OneDrive/Programming_Embedded/OpenCAN/Drivers/CMSIS/Device/ST/STM32F3xx/Include" -I"C:/Users/Ardelean Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include" -I"C:/Users/Ardelean Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS" -I"C:/Users/Ardelean Calin/OneDrive/Programming_Embedded/OpenCAN/Drivers/CMSIS/Include"  -Og -g3 -Wall -fmessage-length=0 -ffunction-sections -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

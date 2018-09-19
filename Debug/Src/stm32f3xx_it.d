@@ -33,6 +33,14 @@ Src/stm32f3xx_it.o: ../Src/stm32f3xx_it.c \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/FreeRTOSConfig.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcRecorder.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/trcConfig.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcPortDefines.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Drivers/CMSIS/Device/ST/STM32F3xx/Include/stm32f303xc.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/trcSnapshotConfig.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcPortDefines.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcHardwarePort.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcKernelPort.h \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/portable.h \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h \
@@ -46,7 +54,8 @@ Src/stm32f3xx_it.o: ../Src/stm32f3xx_it.c \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/queue.h \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h \
- C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/timers.h
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/timers.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/RTE.h
 
 C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal.h:
 
@@ -116,6 +125,22 @@ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third
 
 C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/FreeRTOSConfig.h:
 
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcRecorder.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/trcConfig.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcPortDefines.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Drivers/CMSIS/Device/ST/STM32F3xx/Include/stm32f303xc.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/trcSnapshotConfig.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcPortDefines.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcHardwarePort.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcKernelPort.h:
+
 C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h:
 
 C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/portable.h:
@@ -143,3 +168,5 @@ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third
 C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h:
 
 C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/timers.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/RTE.h:

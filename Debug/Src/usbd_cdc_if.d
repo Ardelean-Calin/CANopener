@@ -41,6 +41,14 @@ Src/usbd_cdc_if.o: ../Src/usbd_cdc_if.c \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/RTE.h \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/FreeRTOSConfig.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcRecorder.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/trcConfig.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcPortDefines.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Drivers/CMSIS/Device/ST/STM32F3xx/Include/stm32f303xc.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/trcSnapshotConfig.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcPortDefines.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcHardwarePort.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcKernelPort.h \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/portable.h \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h \
@@ -131,6 +139,22 @@ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/RTE.h:
 C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h:
 
 C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/FreeRTOSConfig.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcRecorder.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/trcConfig.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcPortDefines.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Drivers/CMSIS/Device/ST/STM32F3xx/Include/stm32f303xc.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/trcSnapshotConfig.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcPortDefines.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcHardwarePort.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcKernelPort.h:
 
 C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h:
 

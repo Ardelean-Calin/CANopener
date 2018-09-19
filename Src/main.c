@@ -51,6 +51,7 @@
 #include "stm32f3xx_hal.h"
 #include "cmsis_os.h"
 #include "usb_device.h"
+#include "usbd_cdc_if.h"
 #include "RTE.h"
 
 /* USER CODE BEGIN Includes */
@@ -58,7 +59,6 @@
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
-CAN_HandleTypeDef hcan;
 
 osThreadId defaultTaskHandle;
 
@@ -71,8 +71,13 @@ osThreadId defaultTaskHandle;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_CAN_Init(void);
-void vMainTask(void * const pvParameters);
+
 void USB_DEVICE_MasterHardReset(void);
+
+// Tasks
+void vRxDecoderTask(void *const pvParameters);
+void vCANTransmitTask(void *const pvParameters);
+void vCANReceiveTask(void *const pvParameters);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -90,77 +95,114 @@ void USB_DEVICE_MasterHardReset(void);
   */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
 
-  /* USER CODE END 1 */
+    /* MCU Configuration----------------------------------------------------------*/
 
-  /* MCU Configuration----------------------------------------------------------*/
+    /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+    HAL_Init();
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+    /* Configure the system clock */
+    SystemClock_Config();
 
-  /* USER CODE BEGIN Init */
+    /* Initialize all configured peripherals */
+    MX_GPIO_Init();
+    MX_CAN_Init();
 
-  /* USER CODE END Init */
+    /* init code for USB_DEVICE */
+    USB_DEVICE_MasterHardReset();
+    MX_USB_DEVICE_Init();
 
-  /* Configure the system clock */
-  SystemClock_Config();
+    vTraceEnable(TRC_START);
 
-  /* USER CODE BEGIN SysInit */
+    cRingBufferIndex = 0;
 
-  /* USER CODE END SysInit */
+    /* USER CODE BEGIN RTOS_THREADS */
+    xTaskCreate(vRxDecoderTask, "RX_DECODER", 128, NULL, 1, NULL);
+    xTaskCreate(vCANTransmitTask, "CAN_TRANSMIT", 128, NULL, 3, NULL);
+    xTaskCreate(vCANReceiveTask, "CAN_RECEIVE", 128, NULL, 1, NULL);
+    /* USER CODE END RTOS_THREADS */
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_CAN_Init();
-  /* USER CODE BEGIN 2 */
+    /* USER CODE BEGIN RTOS_QUEUES */
+    xUSBReceiveQueue = xQueueCreate(USB_RX_BUFFER_SIZE, sizeof(USB_RX_Message_t *));
+    xCANTransmitQueue = xQueueCreate(CAN_TX_BUFFER_SIZE, sizeof(CanTxMsgTypeDef *));
+    /* USER CODE END RTOS_QUEUES */
 
-  /* USER CODE END 2 */
+    /* Start scheduler */
+    vTaskStartScheduler();
 
-  /* USER CODE BEGIN RTOS_MUTEX */
-  /* add mutexes, ... */
-  /* USER CODE END RTOS_MUTEX */
+    /* We should never get here as control is now taken by the scheduler */
 
-  /* USER CODE BEGIN RTOS_SEMAPHORES */
-  /* add semaphores, ... */
-  /* USER CODE END RTOS_SEMAPHORES */
+    /* Infinite loop */
+    /* USER CODE BEGIN WHILE */
+    while (1)
+    {
 
-  /* USER CODE BEGIN RTOS_TIMERS */
-  /* start timers, add new ones, ... */
-  /* USER CODE END RTOS_TIMERS */
+        /* USER CODE END WHILE */
 
-  /* Create the thread(s) */
-  /* definition and creation of defaultTask */
+        /* USER CODE BEGIN 3 */
+    }
+    /* USER CODE END 3 */
+}
 
-  xUSBReceiveQueue = xQueueCreate(10, sizeof(USB_RX_Message_t*));
-  xTaskCreate(vMainTask, "main_task", 128, NULL, 10, NULL);
+void vRxDecoderTask(void *const pvParameters)
+{
+    USB_RX_Message_t *xUSBMessage;
+    CanTxMsgTypeDef *xTXMessage;
 
-  /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
-  /* USER CODE END RTOS_THREADS */
+    for (;;)
+    {
+        xQueueReceive(xUSBReceiveQueue, &(xUSBMessage), portMAX_DELAY);
 
-  /* USER CODE BEGIN RTOS_QUEUES */
-  /* add queues, ... */
-  /* USER CODE END RTOS_QUEUES */
- 
+        // TODO: Ring buffer of X elements (10 maybe for starters?)
+        xTXMessage = &xCANTransmitBuffer[0];
 
-  /* Start scheduler */
-  vTaskStartScheduler();
-  
-  /* We should never get here as control is now taken by the scheduler */
+        uint8_t cCmd = xUSBMessage->cCmd;
+        uint8_t *cData = xUSBMessage->cData;
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  while (1)
-  {
+        switch (cCmd)
+        {
+        case CAN_SEND:
+            xTXMessage->StdId = (uint32_t)GET_CAN_ADDRESS(cData);
+            xTXMessage->DLC = (uint32_t)GET_CAN_DLC(cData);
+            xTXMessage->IDE = (uint32_t)CAN_ID_STD;
+            xTXMessage->RTR = (uint32_t)CAN_RTR_DATA;
+            memcpy(&xTXMessage->Data[0], GET_CAN_DATA_PTR(cData), 8);
+            xQueueSend(xCANTransmitQueue, (void *)&xTXMessage, 0);
+            break;
+        default:
+            break;
+        }
+    }
+}
 
-  /* USER CODE END WHILE */
+/*
+ * This task transmits the CAN messages scheduled for transmission.
+ * TODO: Have the ringbuffer index get locked and unlocked using a binary semaphore or something
+ */
+void vCANTransmitTask(void *const pvParameters)
+{
+    CanTxMsgTypeDef *xCANTxMessage = hcan.pTxMsg;
+    for (;;)
+    {
+        xQueueReceive(xCANTransmitQueue, &(xCANTxMessage), portMAX_DELAY);
+        hcan.pTxMsg = xCANTxMessage;
+        // TODO: What timeout should I put?
+        HAL_CAN_Transmit(&hcan, 0);
+    }
+}
 
-  /* USER CODE BEGIN 3 */
 
-  }
-  /* USER CODE END 3 */
-
+void vCANReceiveTask(void *const pvParameters)
+{
+    volatile HAL_StatusTypeDef status;
+    // TODO: Maybe also monitor FIFO overrun errors? HAL_CAN_ERROR_FOV0
+    CanRxMsgTypeDef *xCANRxMessage = &xCANReceiveBuffer[0];
+    // Basically set in which structure to receive the CAN message
+    hcan.pRxMsg = xCANRxMessage;
+    for (;;)
+    {
+        status = HAL_CAN_Receive_IT(&hcan, CAN_FIFO0);
+    }
 }
 
 void USB_DEVICE_MasterHardReset(void)
@@ -171,24 +213,8 @@ void USB_DEVICE_MasterHardReset(void)
     GPIO_InitStruct.Pull = GPIO_PULLDOWN;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-    HAL_GPIO_WritePin(GPIOA,GPIO_PIN_12,0);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, 0);
     HAL_Delay(1000);
-}
-
-void vMainTask(void * const pvParameters){
-  USB_DEVICE_MasterHardReset();
-  MX_USB_DEVICE_Init();
-
-  USB_RX_Message_t *xUSBMessage;
-
-  for (;;){
-    xQueueReceive(xUSBReceiveQueue, &(xUSBMessage), portMAX_DELAY);
-    CDC_Transmit_FS(xUSBMessage->pcBuffer, xUSBMessage->ulLength);
-
-    // Free the memory allocated before, otherwise we'll get a stack-overflow
-    free(xUSBMessage->pcBuffer);
-    free(xUSBMessage);
-  }
 }
 
 /**
@@ -198,77 +224,100 @@ void vMainTask(void * const pvParameters){
 void SystemClock_Config(void)
 {
 
-  RCC_OscInitTypeDef RCC_OscInitStruct;
-  RCC_ClkInitTypeDef RCC_ClkInitStruct;
-  RCC_PeriphCLKInitTypeDef PeriphClkInit;
+    RCC_OscInitTypeDef RCC_OscInitStruct;
+    RCC_ClkInitTypeDef RCC_ClkInitStruct;
+    RCC_PeriphCLKInitTypeDef PeriphClkInit;
 
     /**Initializes the CPU, AHB and APB busses clocks 
     */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
-  RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV2;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
+    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+    RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
+    RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV2;
+    RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+    RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+    RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
+    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+    {
+        _Error_Handler(__FILE__, __LINE__);
+    }
 
     /**Initializes the CPU, AHB and APB busses clocks 
     */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+    RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+    RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+    RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
+    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+    {
+        _Error_Handler(__FILE__, __LINE__);
+    }
 
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB;
-  PeriphClkInit.USBClockSelection = RCC_USBCLKSOURCE_PLL_DIV1_5;
-  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
+    PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB;
+    PeriphClkInit.USBClockSelection = RCC_USBCLKSOURCE_PLL_DIV1_5;
+    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+    {
+        _Error_Handler(__FILE__, __LINE__);
+    }
 
     /**Configure the Systick interrupt time 
     */
-  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
+    HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq() / 1000);
 
     /**Configure the Systick 
     */
-  HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
 
-  /* SysTick_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(SysTick_IRQn, 15, 0);
+    /* SysTick_IRQn interrupt configuration */
+    HAL_NVIC_SetPriority(SysTick_IRQn, 15, 0);
 }
 
 /* CAN init function */
 static void MX_CAN_Init(void)
 {
+    CAN_FilterConfTypeDef  sFilterConfig;
 
-  hcan.Instance = CAN;
-  hcan.Init.Prescaler = 72;
-  hcan.Init.Mode = CAN_MODE_LOOPBACK;
-  hcan.Init.SJW = CAN_SJW_1TQ;
-  hcan.Init.BS1 = CAN_BS1_1TQ;
-  hcan.Init.BS2 = CAN_BS2_1TQ;
-  hcan.Init.TTCM = DISABLE;
-  hcan.Init.ABOM = DISABLE;
-  hcan.Init.AWUM = DISABLE;
-  hcan.Init.NART = DISABLE;
-  hcan.Init.RFLM = DISABLE;
-  hcan.Init.TXFP = DISABLE;
-  if (HAL_CAN_Init(&hcan) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
+    hcan.Instance = CAN;
+    hcan.Init.Prescaler = 72;
+    hcan.Init.Mode = CAN_MODE_SILENT_LOOPBACK;
+    hcan.Init.SJW = CAN_SJW_1TQ;
+    hcan.Init.BS1 = CAN_BS1_5TQ;
+    hcan.Init.BS2 = CAN_BS1_5TQ;
+    hcan.Init.TTCM = DISABLE;
+    hcan.Init.ABOM = DISABLE;
+    hcan.Init.AWUM = DISABLE;
+    hcan.Init.NART = DISABLE;
+    hcan.Init.RFLM = DISABLE;
+    hcan.Init.TXFP = DISABLE;
+    if (HAL_CAN_Init(&hcan) != HAL_OK)
+    {
+        _Error_Handler(__FILE__, __LINE__);
+    }
+
+     sFilterConfig.FilterNumber = 0;
+     sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+     sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+     sFilterConfig.FilterIdHigh = 0x0000;
+     sFilterConfig.FilterIdLow = 0x0000;
+     sFilterConfig.FilterMaskIdHigh = 0x0000;
+     sFilterConfig.FilterMaskIdLow = 0x0000;
+     sFilterConfig.FilterFIFOAssignment = CAN_FILTER_FIFO1;
+     sFilterConfig.FilterActivation = ENABLE;
+     sFilterConfig.BankNumber = 0;
+
+    if (HAL_CAN_ConfigFilter(&hcan, &sFilterConfig) != HAL_OK)
+    {
+        /* Filter configuration Error */
+        _Error_Handler(__FILE__, __LINE__);
+    }
+
+//    CAN_ITConfig(CAN, CAN_IT_FMP0, ENABLE);
+    HAL_NVIC_SetPriority(CANx_RX_IRQn, configLIBRARY_LOWEST_INTERRUPT_PRIORITY, 0);
+    HAL_NVIC_EnableIRQ(CANx_RX_IRQn);
+
+    HAL_CAN_Receive_IT(&hcan, CAN_FIFO1);
 
 }
 
@@ -282,31 +331,17 @@ static void MX_CAN_Init(void)
 static void MX_GPIO_Init(void)
 {
 
-  /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOF_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-
+    /* GPIO Ports Clock Enable */
+    __HAL_RCC_GPIOF_CLK_ENABLE();
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
 }
+
 
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
 
-/* StartDefaultTask function */
-void StartDefaultTask(void const * argument)
-{
-  /* init code for USB_DEVICE */
-  MX_USB_DEVICE_Init();
-
-  /* USER CODE BEGIN 5 */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END 5 */ 
-}
 
 /**
   * @brief  Period elapsed callback in non blocking mode
@@ -318,15 +353,16 @@ void StartDefaultTask(void const * argument)
   */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-  /* USER CODE BEGIN Callback 0 */
+    /* USER CODE BEGIN Callback 0 */
 
-  /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM3) {
-    HAL_IncTick();
-  }
-  /* USER CODE BEGIN Callback 1 */
+    /* USER CODE END Callback 0 */
+    if (htim->Instance == TIM3)
+    {
+        HAL_IncTick();
+    }
+    /* USER CODE BEGIN Callback 1 */
 
-  /* USER CODE END Callback 1 */
+    /* USER CODE END Callback 1 */
 }
 
 /**
@@ -337,15 +373,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   */
 void _Error_Handler(char *file, int line)
 {
-  /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  while(1)
-  {
-  }
-  /* USER CODE END Error_Handler_Debug */
+    /* USER CODE BEGIN Error_Handler_Debug */
+    /* User can add his own implementation to report the HAL error return state */
+    while (1)
+    {
+    }
+    /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
@@ -353,12 +389,12 @@ void _Error_Handler(char *file, int line)
   * @param  line: assert_param error line source number
   * @retval None
   */
-void assert_failed(uint8_t* file, uint32_t line)
-{ 
-  /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
+void assert_failed(uint8_t *file, uint32_t line)
+{
+    /* USER CODE BEGIN 6 */
+    /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-  /* USER CODE END 6 */
+    /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
 

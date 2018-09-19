@@ -67,6 +67,8 @@
 /* #define USE_FULL_ASSERT    1U */
 
 /* USER CODE BEGIN Private defines */
+#define CANx_RX_IRQn                   CAN_RX1_IRQn
+#define CANx_RX_IRQHandler             CAN_RX1_IRQn_IRQHandler
 
 /* USER CODE END Private defines */
 

@@ -159,6 +159,7 @@ static int8_t CDC_Init_FS(void);
 static int8_t CDC_DeInit_FS(void);
 static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length);
 static int8_t CDC_Receive_FS(uint8_t* pbuf, uint32_t *Len);
+uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len);
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_DECLARATION */
 
@@ -294,18 +295,21 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
 
-  // Spoiler alert: we ARE inside an ISR right now. Who knew?
-  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  if (Buf[0] != RXPROTOCOL_START_VALUE || Buf[*Len - 1] != RXPROTOCOL_END_VALUE){
+    return USBD_FAIL;
+  }
 
   // Allocate memory for this structure
-  USB_RX_Message_t *xUSBMessage = (USB_RX_Message_t*) malloc(sizeof(USB_RX_Message_t));
+  USB_RX_Message_t *xUSBMessage = &xRxRingBuffer[cRingBufferIndex];
 
-  // Allocate enough memory and copy RX data into memory
-  xUSBMessage->pcBuffer = (uint8_t*) malloc(*Len);
-  memcpy(xUSBMessage->pcBuffer, (const void*) Buf, *Len);
+  cRingBufferIndex++;
+  cRingBufferIndex = cRingBufferIndex % 10;
 
-  // Store the length of the data
-  xUSBMessage->ulLength = *Len;
+  xUSBMessage->cCmd = Buf[1];
+  memcpy(xUSBMessage->cData, (const void*) &Buf[2], DATA_PACKET_SIZE);
+
+  // Spoiler alert: we ARE inside an ISR right now. Who knew?
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
   // Store a pointer to the RX structure in the queue
   xQueueSendToFrontFromISR(xUSBReceiveQueue, (void*) &(xUSBMessage), &xHigherPriorityTaskWoken);

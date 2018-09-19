@@ -35,6 +35,7 @@
 #include "stm32f3xx.h"
 #include "stm32f3xx_it.h"
 #include "cmsis_os.h"
+#include "RTE.h"
 
 /* USER CODE BEGIN 0 */
 
@@ -194,6 +195,11 @@ void USB_LP_IRQHandler(void)
   /* USER CODE BEGIN USB_LP_IRQn 1 */
 
   /* USER CODE END USB_LP_IRQn 1 */
+}
+
+void CAN_RX1_IRQn_IRQHandler(void)
+{
+    HAL_CAN_IRQHandler(&hcan);
 }
 
 /* USER CODE BEGIN 1 */

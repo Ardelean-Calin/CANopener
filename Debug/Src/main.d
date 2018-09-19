@@ -33,6 +33,14 @@ Src/main.o: ../Src/main.c \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/FreeRTOSConfig.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcRecorder.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/trcConfig.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcPortDefines.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Drivers/CMSIS/Device/ST/STM32F3xx/Include/stm32f303xc.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/trcSnapshotConfig.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcPortDefines.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcHardwarePort.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcKernelPort.h \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/portable.h \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h \
@@ -50,6 +58,13 @@ Src/main.o: ../Src/main.c \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/usb_device.h \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/usbd_conf.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/usbd_cdc_if.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h \
+ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h \
  C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/RTE.h
 
 C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/main.h:
@@ -120,6 +135,22 @@ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third
 
 C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/FreeRTOSConfig.h:
 
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcRecorder.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/trcConfig.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcPortDefines.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Drivers/CMSIS/Device/ST/STM32F3xx/Include/stm32f303xc.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/trcSnapshotConfig.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcPortDefines.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcHardwarePort.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/TracealyzerLib/include/trcKernelPort.h:
+
 C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h:
 
 C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/Third_Party/FreeRTOS/Source/include/portable.h:
@@ -153,5 +184,19 @@ C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/usb_device.h:
 C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h:
 
 C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/usbd_conf.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/usbd_cdc_if.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h:
+
+C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h:
 
 C:/Users/Ardelean\ Calin/OneDrive/Programming_Embedded/OpenCAN/Inc/RTE.h:
