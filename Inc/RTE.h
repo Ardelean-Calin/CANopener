@@ -12,6 +12,7 @@
 #include "queue.h"
 
 #define USB_RX_BUFFER_SIZE      10
+#define USB_TX_BUFFER_SIZE      10
 #define CAN_TX_BUFFER_SIZE      10
 #define CAN_RX_BUFFER_SIZE      10
 #define RXPROTOCOL_START_VALUE  0xDE
@@ -41,6 +42,11 @@ typedef struct {
 
 USB_RX_Message_t xRxRingBuffer[USB_RX_BUFFER_SIZE];
 
+typedef struct {
+  uint8_t cCmd;
+  uint8_t cData[DATA_PACKET_SIZE];
+} USB_TX_Message_t;
+
 uint8_t cRingBufferIndex;
 
 CanTxMsgTypeDef xCANTransmitBuffer[CAN_TX_BUFFER_SIZE];
@@ -54,7 +60,9 @@ enum {
 CAN_HandleTypeDef hcan;
 
 // Queues
+QueueHandle_t xUSBTransmitQueue;
 QueueHandle_t xUSBReceiveQueue;
 QueueHandle_t xCANTransmitQueue;
+QueueHandle_t xCANReceiveQueue;
 
 #endif /* RTE_H_ */

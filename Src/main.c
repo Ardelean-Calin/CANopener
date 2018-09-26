@@ -75,9 +75,10 @@ static void MX_CAN_Init(void);
 void USB_DEVICE_MasterHardReset(void);
 
 // Tasks
-void vRxDecoderTask(void *const pvParameters);
-void vCANTransmitTask(void *const pvParameters);
-void vCANReceiveTask(void *const pvParameters);
+void vUSBRxDecoderTask(void* const pvParameters);
+void vCANRxEncoderTask(void* const pvParameters);
+void vCANTransmitTask(void* const pvParameters);
+void vCANReceiveTask(void* const pvParameters);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -117,13 +118,16 @@ int main(void)
     cRingBufferIndex = 0;
 
     /* USER CODE BEGIN RTOS_THREADS */
-    xTaskCreate(vRxDecoderTask, "RX_DECODER", 128, NULL, 1, NULL);
+    xTaskCreate(vUSBRxDecoderTask, "USB_RX_DECODER", 128, NULL, 1, NULL);
+//    xTaskCreate(vCANRxEncoderTask, "CAN_RX_ENCODER", 128, NULL, 1, NULL);
     xTaskCreate(vCANTransmitTask, "CAN_TRANSMIT", 128, NULL, 3, NULL);
     xTaskCreate(vCANReceiveTask, "CAN_RECEIVE", 128, NULL, 1, NULL);
     /* USER CODE END RTOS_THREADS */
 
     /* USER CODE BEGIN RTOS_QUEUES */
-    xUSBReceiveQueue = xQueueCreate(USB_RX_BUFFER_SIZE, sizeof(USB_RX_Message_t *));
+    xUSBReceiveQueue  = xQueueCreate(USB_RX_BUFFER_SIZE, sizeof(USB_RX_Message_t *));
+//    xUSBTransmitQueue = xQueueCreate(USB_TX_BUFFER_SIZE, sizeof(USB_TX_Message_t *));
+//    xCANReceiveQueue  = xQueueCreate(CAN_RX_BUFFER_SIZE, sizeof(CanRxMsgTypeDef *));
     xCANTransmitQueue = xQueueCreate(CAN_TX_BUFFER_SIZE, sizeof(CanTxMsgTypeDef *));
     /* USER CODE END RTOS_QUEUES */
 
@@ -132,21 +136,14 @@ int main(void)
 
     /* We should never get here as control is now taken by the scheduler */
 
-    /* Infinite loop */
     /* USER CODE BEGIN WHILE */
-    while (1)
-    {
-
-        /* USER CODE END WHILE */
-
-        /* USER CODE BEGIN 3 */
-    }
+    while (1){}
     /* USER CODE END 3 */
 }
 
-void vRxDecoderTask(void *const pvParameters)
+void vUSBRxDecoderTask(void* const pvParameters)
 {
-    USB_RX_Message_t *xUSBMessage;
+    USB_RX_Message_t* xUSBMessage;
     CanTxMsgTypeDef *xTXMessage;
 
     for (;;)
@@ -176,10 +173,18 @@ void vRxDecoderTask(void *const pvParameters)
 }
 
 /*
+ * This task encodes the received CAN frame into an USB message and sends it to
+ * the USB transmit queue.
+ */
+void vCANRxEncoderTask(void* const pvParameters)
+{
+	for (;;){}
+}
+/*
  * This task transmits the CAN messages scheduled for transmission.
  * TODO: Have the ringbuffer index get locked and unlocked using a binary semaphore or something
  */
-void vCANTransmitTask(void *const pvParameters)
+void vCANTransmitTask(void* const pvParameters)
 {
     CanTxMsgTypeDef *xCANTxMessage = hcan.pTxMsg;
     for (;;)
@@ -192,7 +197,7 @@ void vCANTransmitTask(void *const pvParameters)
 }
 
 
-void vCANReceiveTask(void *const pvParameters)
+void vCANReceiveTask(void* const pvParameters)
 {
     volatile HAL_StatusTypeDef status;
     // TODO: Maybe also monitor FIFO overrun errors? HAL_CAN_ERROR_FOV0
@@ -201,7 +206,10 @@ void vCANReceiveTask(void *const pvParameters)
     hcan.pRxMsg = xCANRxMessage;
     for (;;)
     {
-        status = HAL_CAN_Receive_IT(&hcan, CAN_FIFO0);
+        status = HAL_CAN_Receive(&hcan, CAN_FIFO0, 10U);
+        if(status == HAL_OK){
+        	status = HAL_OK;
+        }
     }
 }
 
@@ -280,11 +288,11 @@ static void MX_CAN_Init(void)
     CAN_FilterConfTypeDef  sFilterConfig;
 
     hcan.Instance = CAN;
-    hcan.Init.Prescaler = 72;
-    hcan.Init.Mode = CAN_MODE_SILENT_LOOPBACK;
+    hcan.Init.Prescaler = 9;
+    hcan.Init.Mode = CAN_MODE_NORMAL;
     hcan.Init.SJW = CAN_SJW_1TQ;
-    hcan.Init.BS1 = CAN_BS1_5TQ;
-    hcan.Init.BS2 = CAN_BS1_5TQ;
+    hcan.Init.BS1 = CAN_BS1_6TQ;
+    hcan.Init.BS2 = CAN_BS1_1TQ;
     hcan.Init.TTCM = DISABLE;
     hcan.Init.ABOM = DISABLE;
     hcan.Init.AWUM = DISABLE;
@@ -303,7 +311,7 @@ static void MX_CAN_Init(void)
      sFilterConfig.FilterIdLow = 0x0000;
      sFilterConfig.FilterMaskIdHigh = 0x0000;
      sFilterConfig.FilterMaskIdLow = 0x0000;
-     sFilterConfig.FilterFIFOAssignment = CAN_FILTER_FIFO1;
+     sFilterConfig.FilterFIFOAssignment = CAN_FILTER_FIFO0;
      sFilterConfig.FilterActivation = ENABLE;
      sFilterConfig.BankNumber = 0;
 
@@ -312,13 +320,6 @@ static void MX_CAN_Init(void)
         /* Filter configuration Error */
         _Error_Handler(__FILE__, __LINE__);
     }
-
-//    CAN_ITConfig(CAN, CAN_IT_FMP0, ENABLE);
-    HAL_NVIC_SetPriority(CANx_RX_IRQn, configLIBRARY_LOWEST_INTERRUPT_PRIORITY, 0);
-    HAL_NVIC_EnableIRQ(CANx_RX_IRQn);
-
-    HAL_CAN_Receive_IT(&hcan, CAN_FIFO1);
-
 }
 
 /** Configure pins as 
