@@ -295,18 +295,19 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
 
-  if (Buf[0] != RXPROTOCOL_START_VALUE || Buf[*Len - 1] != RXPROTOCOL_END_VALUE){
+  // Check for start and stop value of our Serial Protocol
+  if (Buf[0] != USB_RX_START_VALUE || Buf[*Len - 1] != USB_RX_END_VALUE){
     return USBD_FAIL;
   }
 
   // Allocate memory for this structure
-  USB_RX_Message_t *xUSBMessage = &xRxRingBuffer[cRingBufferIndex];
+  xUSB_RX_Message_t *xUSBMessage = &xRxRingBuffer[cRingBufferIndex];
 
   cRingBufferIndex++;
   cRingBufferIndex = cRingBufferIndex % 10;
 
   xUSBMessage->cCmd = Buf[1];
-  memcpy(xUSBMessage->cData, (const void*) &Buf[2], DATA_PACKET_SIZE);
+  memcpy(xUSBMessage->cData, (const void*) &Buf[2], USB_RX_DATA_PACKET_SIZE);
 
   // Spoiler alert: we ARE inside an ISR right now. Who knew?
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -314,6 +315,8 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
   // Store a pointer to the RX structure in the queue
   xQueueSendToFrontFromISR(xUSBReceiveQueue, (void*) &(xUSBMessage), &xHigherPriorityTaskWoken);
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+
+  return USBD_OK;
   /* USER CODE END 6 */
 }
 

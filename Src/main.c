@@ -53,19 +53,10 @@
 #include "usb_device.h"
 #include "usbd_cdc_if.h"
 #include "RTE.h"
-
-/* USER CODE BEGIN Includes */
-
-/* USER CODE END Includes */
-
+#include "typedefs.h"
 /* Private variables ---------------------------------------------------------*/
 
 osThreadId defaultTaskHandle;
-
-/* USER CODE BEGIN PV */
-/* Private variables ---------------------------------------------------------*/
-
-/* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -79,15 +70,6 @@ void vUSBRxDecoderTask(void* const pvParameters);
 void vCANRxEncoderTask(void* const pvParameters);
 void vCANTransmitTask(void* const pvParameters);
 void vCANReceiveTask(void* const pvParameters);
-
-/* USER CODE BEGIN PFP */
-/* Private function prototypes -----------------------------------------------*/
-
-/* USER CODE END PFP */
-
-/* USER CODE BEGIN 0 */
-
-/* USER CODE END 0 */
 
 /**
   * @brief  The application entry point.
@@ -118,17 +100,22 @@ int main(void)
     cRingBufferIndex = 0;
 
     /* USER CODE BEGIN RTOS_THREADS */
-    xTaskCreate(vUSBRxDecoderTask, "USB_RX_DECODER", 128, NULL, 1, NULL);
-//    xTaskCreate(vCANRxEncoderTask, "CAN_RX_ENCODER", 128, NULL, 1, NULL);
-    xTaskCreate(vCANTransmitTask, "CAN_TRANSMIT", 128, NULL, 3, NULL);
-    xTaskCreate(vCANReceiveTask, "CAN_RECEIVE", 128, NULL, 1, NULL);
+    xTaskCreate(vUSBRxDecoderTask, "USB_RX_DECODER", 64, NULL, 1, NULL);
+    xTaskCreate(vCANRxEncoderTask, "CAN_RX_ENCODER", 64, NULL, 4, NULL);
+    xTaskCreate(vCANTransmitTask, "CAN_TRANSMIT", 64, NULL, 3, NULL);
+    xTaskCreate(vCANReceiveTask, "CAN_RECEIVE", 64, NULL, 1, NULL);
     /* USER CODE END RTOS_THREADS */
 
     /* USER CODE BEGIN RTOS_QUEUES */
-    xUSBReceiveQueue  = xQueueCreate(USB_RX_BUFFER_SIZE, sizeof(USB_RX_Message_t *));
-//    xUSBTransmitQueue = xQueueCreate(USB_TX_BUFFER_SIZE, sizeof(USB_TX_Message_t *));
-//    xCANReceiveQueue  = xQueueCreate(CAN_RX_BUFFER_SIZE, sizeof(CanRxMsgTypeDef *));
+    xUSBReceiveQueue  = xQueueCreate(USB_RX_BUFFER_SIZE, sizeof(xUSB_RX_Message_t *));
+    xUSBTransmitQueue = xQueueCreate(USB_TX_BUFFER_SIZE, sizeof(xUSB_TX_Message_t *));
+    xCANReceiveQueue  = xQueueCreate(CAN_RX_BUFFER_SIZE, sizeof(CanRxMsgTypeDef *));
     xCANTransmitQueue = xQueueCreate(CAN_TX_BUFFER_SIZE, sizeof(CanTxMsgTypeDef *));
+
+    vQueueAddToRegistry(xUSBReceiveQueue,   "USB Receive Queue");
+    vQueueAddToRegistry(xUSBTransmitQueue,  "USB Transmit Queue");
+    vQueueAddToRegistry(xCANReceiveQueue,   "CAN Receive Queue");
+    vQueueAddToRegistry(xCANTransmitQueue,  "CAN Transmit Queue");
     /* USER CODE END RTOS_QUEUES */
 
     /* Start scheduler */
@@ -136,14 +123,12 @@ int main(void)
 
     /* We should never get here as control is now taken by the scheduler */
 
-    /* USER CODE BEGIN WHILE */
     while (1){}
-    /* USER CODE END 3 */
 }
 
 void vUSBRxDecoderTask(void* const pvParameters)
 {
-    USB_RX_Message_t* xUSBMessage;
+    xUSB_RX_Message_t* xUSBMessage;
     CanTxMsgTypeDef *xTXMessage;
 
     for (;;)
@@ -160,12 +145,13 @@ void vUSBRxDecoderTask(void* const pvParameters)
         {
         case CAN_SEND:
             xTXMessage->StdId = (uint32_t)GET_CAN_ADDRESS(cData);
-            xTXMessage->DLC = (uint32_t)GET_CAN_DLC(cData);
-            xTXMessage->IDE = (uint32_t)CAN_ID_STD;
-            xTXMessage->RTR = (uint32_t)CAN_RTR_DATA;
+            xTXMessage->DLC   = (uint32_t)GET_CAN_DLC(cData);
+            xTXMessage->IDE   = (uint32_t)CAN_ID_STD;
+            xTXMessage->RTR   = (uint32_t)CAN_RTR_DATA;
             memcpy(&xTXMessage->Data[0], GET_CAN_DATA_PTR(cData), 8);
             xQueueSend(xCANTransmitQueue, (void *)&xTXMessage, 0);
             break;
+        case CAN_SET_BAUDRATE:
         default:
             break;
         }
@@ -178,7 +164,23 @@ void vUSBRxDecoderTask(void* const pvParameters)
  */
 void vCANRxEncoderTask(void* const pvParameters)
 {
-	for (;;){}
+    CanRxMsgTypeDef* xCANRxMessage;
+    xUSB_TX_Message_t xTXMessage;
+
+    xTXMessage[0] = USB_TX_START_VALUE;
+    xTXMessage[USB_TX_DATA_PACKET_SIZE - 1] = USB_TX_END_VALUE;
+
+	for (;;)
+	{
+        xQueueReceive(xCANReceiveQueue, &xCANRxMessage, portMAX_DELAY);
+        // Encode DLC, CAN ID and CAN DATA inside the message
+        xTXMessage[1] = (xCANRxMessage->DLC << 4) + (xCANRxMessage->StdId >> 8);
+        xTXMessage[2] = xCANRxMessage->StdId;
+        memcpy(&xTXMessage[3], &xCANRxMessage->Data[0], 8U);
+
+		// Now we need to encode a serial message and send it via USB
+        CDC_Transmit_FS(&xTXMessage, USB_TX_DATA_PACKET_SIZE);
+	}
 }
 /*
  * This task transmits the CAN messages scheduled for transmission.
@@ -189,27 +191,43 @@ void vCANTransmitTask(void* const pvParameters)
     CanTxMsgTypeDef *xCANTxMessage = hcan.pTxMsg;
     for (;;)
     {
-        xQueueReceive(xCANTransmitQueue, &(xCANTxMessage), portMAX_DELAY);
+        xQueueReceive(xCANTransmitQueue, &xCANTxMessage, portMAX_DELAY);
         hcan.pTxMsg = xCANTxMessage;
         // TODO: What timeout should I put?
         HAL_CAN_Transmit(&hcan, 0);
     }
 }
 
-
+/*
+ * CAN Receive Task. Runs every 1 ms.
+ */
 void vCANReceiveTask(void* const pvParameters)
 {
-    volatile HAL_StatusTypeDef status;
+	TickType_t xLastWakeTime;
+	const TickType_t xFrequency = 1;
+    // Initialize the xLastWakeTime variable with the current time.
+	xLastWakeTime = xTaskGetTickCount();
+
     // TODO: Maybe also monitor FIFO overrun errors? HAL_CAN_ERROR_FOV0
     CanRxMsgTypeDef *xCANRxMessage = &xCANReceiveBuffer[0];
     // Basically set in which structure to receive the CAN message
     hcan.pRxMsg = xCANRxMessage;
+
     for (;;)
     {
-        status = HAL_CAN_Receive(&hcan, CAN_FIFO0, 10U);
-        if(status == HAL_OK){
-        	status = HAL_OK;
-        }
+    	// Only if we have a message in the receive queue
+    	if (hcan.Instance->RF0R & 0b11)
+    	{
+    		// Read the message from the FIFO.
+    		HAL_CAN_Receive(&hcan, CAN_FIFO0, 0U);
+            // Send a pointer to the CAN RX message as payload since it's big
+            // and would take a lot of time to just copy it.
+            xQueueSend(xCANReceiveQueue, (void*) &xCANRxMessage, 0U);
+    		// Put the message in the Rx Message Queue
+    	}
+
+    	// Delay until 1ms passed since last iteration.
+    	vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
 }
 

@@ -1,6 +1,7 @@
 {
     "editor.tabSize": 4,
     "files.associations": {
-        "rte.h": "c"
+        "rte.h": "c",
+        "cmsis_os.h": "c"
     }
 }
