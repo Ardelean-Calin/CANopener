@@ -65,10 +65,10 @@ CFLAGS += -ITracealyzerLib/include
 SOURCES = $(call rwildcard,Drivers,*.c) \
 		  $(call rwildcard,Middlewares,*.c) \
 		  $(call rwildcard,Src,*.c) \
-		  $(call rwildcard,TracealyzerLib,*.c)
+		  $(call rwildcard,TracealyzerLib,*.c) \
+		  startup/startup_stm32f303xc.s
 # And the equivalend object files to be created
-OBJECTS = startup/startup_stm32f303xc.o
-OBJECTS += $(patsubst %.c,%.o, $(SOURCES))
+OBJECTS = $(patsubst %.s,%.o,$(patsubst %.c,%.o,$(SOURCES)))
 
 # Now we start with the rules
 # To generate an .elf we need to:
