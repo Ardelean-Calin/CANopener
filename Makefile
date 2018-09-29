@@ -4,7 +4,7 @@
 # User defined functions
 MKDIR_P = mkdir -p
 # Make does not offer a recursive wildcard function, so here's one:
-# rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
+rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
 
 # Executables for compiler, assembler and linker
 CC = arm-none-eabi-gcc
@@ -26,17 +26,26 @@ CFLAGS = -Wall \
 		 -mfloat-abi=hard \
 		 -mfpu=fpv4-sp-d16 
 
+# Linker flags, here we specify the .ld script
+LDFLAGS = -T"STM32F303CBTx_FLASH.ld" -Wl,-Map,$(basename $(OUT_NAME)).map -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -specs=nosys.specs -specs=nano.specs -Wl,--gc-sections
+# Assembler flags needed for startup_stm32f303xc.s
+ASFLAGS = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
+
 # Debug flags. By default, debug is disabled
 CFLAGS_DEBUG = -g3 -Og
+LDFLAGS_DEBUG =
+ASFLAGS_DEBUG = -g
+
 DEBUG ?= 0
 ifeq ($(DEBUG), 1)
     CFLAGS += $(CFLAGS_DEBUG)
 endif
-
-# Linker flags, here we specify the .ld script
-LDFLAGS = -T"STM32F303CBTx_FLASH.ld" -Wl,-Map,$(basename $(OUT_NAME)).map -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -specs=nosys.specs -specs=nano.specs -Wl,--gc-sections
-# Assembler flags needed for startup_stm32f303xc.s
-ASFLAGS = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -g -o
+ifeq ($(DEBUG), 1)
+    LDFLAGS += $(LDFLAGS_DEBUG)
+endif
+ifeq ($(DEBUG), 1)
+    ASFLAGS += $(ASFLAGS_DEBUG)
+endif
 
 # Includes
 CFLAGS += -I.
@@ -58,8 +67,8 @@ SOURCES = $(call rwildcard,Drivers,*.c) \
 		  $(call rwildcard,Src,*.c) \
 		  $(call rwildcard,TracealyzerLib,*.c)
 # And the equivalend object files to be created
-OBJECTS = $(patsubst %.c,%.o, $(SOURCES))
-OBJECTS += startup/startup_stm32f303xc.o
+OBJECTS = startup/startup_stm32f303xc.o
+OBJECTS += $(patsubst %.c,%.o, $(SOURCES))
 
 # Now we start with the rules
 # To generate an .elf we need to:
@@ -82,9 +91,8 @@ program: $(OUT_DIR)/$(OUT_NAME)
 %.o: %.c
 	$(CC) -c $(CFLAGS) $< -o $@
 
-
 %.o: %.s
-	$(AS) $(ASFLAGS) $@ $<
+	$(AS) $(ASFLAGS) -o $@ $<
 
 # Clean as ice
 clean:
