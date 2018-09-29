@@ -4,9 +4,19 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "echo",
+            "label": "BUILD_DEBUG",
             "type": "shell",
-            "command": "echo Hello"
+            "dependsOn": "BUILD_CLEAN",
+            "command": "make DEBUG=1",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "BUILD_CLEAN",
+            "type": "shell",
+            "command": "make clean"
         }
     ]
 }

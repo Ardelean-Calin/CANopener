@@ -86,16 +86,17 @@ program: $(OUT_DIR)/$(OUT_NAME)
 
 # The main .elf file depends on the objects and on the linker file
 %.elf: $(OBJECTS) STM32F303CBTx_FLASH.ld
-	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) -lm
+	$(LD) $(LDFLAGS) -o $@ $(wildcard $(OUT_DIR)/*.o) -lm
+	rm -f $(wildcard $(OUT_DIR)/*.o)
 
+# Objects will be output in the build directory. Just leave $@ if we don't want that
 %.o: %.c
-	$(CC) -c $(CFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $(OUT_DIR)/$(notdir $@)
 
 %.o: %.s
-	$(AS) $(ASFLAGS) -o $@ $<
+	$(AS) $(ASFLAGS) -o $(OUT_DIR)/$(notdir $@) $<
 
 # Clean as ice
 clean:
-	rm -f $(OBJECTS)
+	rm -rf $(OUT_DIR)
 	rm -f $(basename $(OUT_NAME)).map
-	rm -f $(OUT_DIR)/$(OUT_NAME)

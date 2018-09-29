@@ -5,6 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "preLaunchTask": "BUILD_DEBUG",
             "name": "Cortex Debug",
             "request": "launch",
             "type": "cortex-debug",
