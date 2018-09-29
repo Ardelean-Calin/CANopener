@@ -34,7 +34,7 @@ ifeq ($(DEBUG), 1)
 endif
 
 # Linker flags, here we specify the .ld script
-LDFLAGS = -T"STM32F303CBTx_FLASH.ld" -Wl,-Map,OpenCAN.map -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -specs=nosys.specs -specs=nano.specs -Wl,--gc-sections
+LDFLAGS = -T"STM32F303CBTx_FLASH.ld" -Wl,-Map,$(basename $(OUT_NAME)).map -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -specs=nosys.specs -specs=nano.specs -Wl,--gc-sections
 # Assembler flags needed for startup_stm32f303xc.s
 ASFLAGS = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -g -o
 
@@ -89,4 +89,5 @@ program: $(OUT_DIR)/$(OUT_NAME)
 # Clean as ice
 clean:
 	rm -f $(OBJECTS)
+	rm -f $(basename $(OUT_NAME)).map
 	rm -f $(OUT_DIR)/$(OUT_NAME)
