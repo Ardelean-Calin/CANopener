@@ -1,18 +1,21 @@
 .DEFAULT_GOAL := all
 .PHONY: directories elf clean
 
+# User defined functions
 MKDIR_P = mkdir -p
-
 # Make does not offer a recursive wildcard function, so here's one:
-rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
+# rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
 
+# Executables for compiler, assembler and linker
 CC = arm-none-eabi-gcc
 AS = arm-none-eabi-as
 LD = arm-none-eabi-gcc
 
+# Output file name and location
 OUT_NAME = OpenCAN.elf
 OUT_DIR = build
 
+# Standard cflags
 CFLAGS = -Wall \
 		 -DSTM32F303xC \
 		 -DUSE_HAL_DRIVER \
@@ -21,11 +24,19 @@ CFLAGS = -Wall \
 		 -mcpu=cortex-m4 \
 		 -mthumb \
 		 -mfloat-abi=hard \
-		 -mfpu=fpv4-sp-d16 \
-		 -g3 \
-		 -Og
+		 -mfpu=fpv4-sp-d16 
 
+# Debug flags. By default, debug is disabled
+CFLAGS_DEBUG = -g3 -Og
+DEBUG ?= 0
+ifeq ($(DEBUG), 1)
+    CFLAGS += $(CFLAGS_DEBUG)
+endif
+
+# Linker flags, here we specify the .ld script
 LDFLAGS = -T"STM32F303CBTx_FLASH.ld" -Wl,-Map,OpenCAN.map -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -specs=nosys.specs -specs=nano.specs -Wl,--gc-sections
+# Assembler flags needed for startup_stm32f303xc.s
+ASFLAGS = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -g -o
 
 # Includes
 CFLAGS += -I.
@@ -41,17 +52,19 @@ CFLAGS += -IDrivers/CMSIS/Include
 CFLAGS += -IDrivers/CMSIS/Device/ST/STM32F3xx/Include
 CFLAGS += -ITracealyzerLib/include
 
-ASFLAGS = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -g -o
-
 # These are all the sources that need to be compiled for ulterior linking
 SOURCES = $(call rwildcard,Drivers,*.c) \
 		  $(call rwildcard,Middlewares,*.c) \
 		  $(call rwildcard,Src,*.c) \
 		  $(call rwildcard,TracealyzerLib,*.c)
-
+# And the equivalend object files to be created
 OBJECTS = $(patsubst %.c,%.o, $(SOURCES))
 OBJECTS += startup/startup_stm32f303xc.o
 
+# Now we start with the rules
+# To generate an .elf we need to:
+# 	1. Compile all required .o files (for our code and the libraries used)
+#	2. Link all the object files into one .elf file using the liker script
 all: directories program
 
 # Create output directory(s) if it doesn't exist
@@ -73,6 +86,7 @@ program: $(OUT_DIR)/$(OUT_NAME)
 %.o: %.s
 	$(AS) $(ASFLAGS) $@ $<
 
+# Clean as ice
 clean:
 	rm -f $(OBJECTS)
 	rm -f $(OUT_DIR)/$(OUT_NAME)
