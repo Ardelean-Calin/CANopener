@@ -66,10 +66,10 @@ static void MX_CAN_Init(void);
 void USB_DEVICE_MasterHardReset(void);
 
 // Tasks
-void vUSBRxDecoderTask(void* const pvParameters);
-void vCANRxEncoderTask(void* const pvParameters);
-void vCANTransmitTask(void* const pvParameters);
-void vCANReceiveTask(void* const pvParameters);
+void vUSBRxDecoderTask(void *const pvParameters);
+void vCANRxEncoderTask(void *const pvParameters);
+void vCANTransmitTask(void *const pvParameters);
+void vCANReceiveTask(void *const pvParameters);
 
 /**
   * @brief  The application entry point.
@@ -107,15 +107,15 @@ int main(void)
     /* USER CODE END RTOS_THREADS */
 
     /* USER CODE BEGIN RTOS_QUEUES */
-    xUSBReceiveQueue  = xQueueCreate(USB_RX_BUFFER_SIZE, sizeof(xUSB_RX_Message_t *));
+    xUSBReceiveQueue = xQueueCreate(USB_RX_BUFFER_SIZE, sizeof(xUSB_RX_Message_t *));
     xUSBTransmitQueue = xQueueCreate(USB_TX_BUFFER_SIZE, sizeof(xUSB_TX_Message_t *));
-    xCANReceiveQueue  = xQueueCreate(CAN_RX_BUFFER_SIZE, sizeof(CanRxMsgTypeDef *));
+    xCANReceiveQueue = xQueueCreate(CAN_RX_BUFFER_SIZE, sizeof(CanRxMsgTypeDef *));
     xCANTransmitQueue = xQueueCreate(CAN_TX_BUFFER_SIZE, sizeof(CanTxMsgTypeDef *));
 
-    vQueueAddToRegistry(xUSBReceiveQueue,   "USB Receive Queue");
-    vQueueAddToRegistry(xUSBTransmitQueue,  "USB Transmit Queue");
-    vQueueAddToRegistry(xCANReceiveQueue,   "CAN Receive Queue");
-    vQueueAddToRegistry(xCANTransmitQueue,  "CAN Transmit Queue");
+    vQueueAddToRegistry(xUSBReceiveQueue, "USB Receive Queue");
+    vQueueAddToRegistry(xUSBTransmitQueue, "USB Transmit Queue");
+    vQueueAddToRegistry(xCANReceiveQueue, "CAN Receive Queue");
+    vQueueAddToRegistry(xCANTransmitQueue, "CAN Transmit Queue");
     /* USER CODE END RTOS_QUEUES */
 
     /* Start scheduler */
@@ -123,12 +123,14 @@ int main(void)
 
     /* We should never get here as control is now taken by the scheduler */
 
-    while (1){}
+    while (1)
+    {
+    }
 }
 
-void vUSBRxDecoderTask(void* const pvParameters)
+void vUSBRxDecoderTask(void *const pvParameters)
 {
-    xUSB_RX_Message_t* xUSBMessage;
+    xUSB_RX_Message_t *xUSBMessage;
     CanTxMsgTypeDef *xTXMessage;
 
     for (;;)
@@ -145,9 +147,9 @@ void vUSBRxDecoderTask(void* const pvParameters)
         {
         case CAN_SEND:
             xTXMessage->StdId = (uint32_t)GET_CAN_ADDRESS(cData);
-            xTXMessage->DLC   = (uint32_t)GET_CAN_DLC(cData);
-            xTXMessage->IDE   = (uint32_t)CAN_ID_STD;
-            xTXMessage->RTR   = (uint32_t)CAN_RTR_DATA;
+            xTXMessage->DLC = (uint32_t)GET_CAN_DLC(cData);
+            xTXMessage->IDE = (uint32_t)CAN_ID_STD;
+            xTXMessage->RTR = (uint32_t)CAN_RTR_DATA;
             memcpy(&xTXMessage->Data[0], GET_CAN_DATA_PTR(cData), 8);
             xQueueSend(xCANTransmitQueue, (void *)&xTXMessage, 0);
             break;
@@ -162,31 +164,31 @@ void vUSBRxDecoderTask(void* const pvParameters)
  * This task encodes the received CAN frame into an USB message and sends it to
  * the USB transmit queue.
  */
-void vCANRxEncoderTask(void* const pvParameters)
+void vCANRxEncoderTask(void *const pvParameters)
 {
-    CanRxMsgTypeDef* xCANRxMessage;
-    xUSB_TX_Message_t xTXMessage;
+    CanRxMsgTypeDef *xCANRxMessage;
+    uint8_t xTXMessage[12];
 
     xTXMessage[0] = USB_TX_START_VALUE;
     xTXMessage[USB_TX_DATA_PACKET_SIZE - 1] = USB_TX_END_VALUE;
 
-	for (;;)
-	{
+    for (;;)
+    {
         xQueueReceive(xCANReceiveQueue, &xCANRxMessage, portMAX_DELAY);
         // Encode DLC, CAN ID and CAN DATA inside the message
         xTXMessage[1] = (xCANRxMessage->DLC << 4) + (xCANRxMessage->StdId >> 8);
         xTXMessage[2] = xCANRxMessage->StdId;
         memcpy(&xTXMessage[3], &xCANRxMessage->Data[0], 8U);
 
-		// Now we need to encode a serial message and send it via USB
+        // Now we need to encode a serial message and send it via USB
         CDC_Transmit_FS(&xTXMessage, USB_TX_DATA_PACKET_SIZE);
-	}
+    }
 }
 /*
  * This task transmits the CAN messages scheduled for transmission.
  * TODO: Have the ringbuffer index get locked and unlocked using a binary semaphore or something
  */
-void vCANTransmitTask(void* const pvParameters)
+void vCANTransmitTask(void *const pvParameters)
 {
     CanTxMsgTypeDef *xCANTxMessage = hcan.pTxMsg;
     for (;;)
@@ -201,12 +203,12 @@ void vCANTransmitTask(void* const pvParameters)
 /*
  * CAN Receive Task. Runs every 1 ms.
  */
-void vCANReceiveTask(void* const pvParameters)
+void vCANReceiveTask(void *const pvParameters)
 {
-	TickType_t xLastWakeTime;
-	const TickType_t xFrequency = 1;
+    TickType_t xLastWakeTime;
+    const TickType_t xFrequency = 1;
     // Initialize the xLastWakeTime variable with the current time.
-	xLastWakeTime = xTaskGetTickCount();
+    xLastWakeTime = xTaskGetTickCount();
 
     // TODO: Maybe also monitor FIFO overrun errors? HAL_CAN_ERROR_FOV0
     CanRxMsgTypeDef *xCANRxMessage = &xCANReceiveBuffer[0];
@@ -215,19 +217,19 @@ void vCANReceiveTask(void* const pvParameters)
 
     for (;;)
     {
-    	// Only if we have a message in the receive queue
-    	if (hcan.Instance->RF0R & 0b11)
-    	{
-    		// Read the message from the FIFO.
-    		HAL_CAN_Receive(&hcan, CAN_FIFO0, 0U);
+        // Only if we have a message in the receive queue
+        if (hcan.Instance->RF0R & 0b11)
+        {
+            // Read the message from the FIFO.
+            HAL_CAN_Receive(&hcan, CAN_FIFO0, 0U);
             // Send a pointer to the CAN RX message as payload since it's big
             // and would take a lot of time to just copy it.
-            xQueueSend(xCANReceiveQueue, (void*) &xCANRxMessage, 0U);
-    		// Put the message in the Rx Message Queue
-    	}
+            xQueueSend(xCANReceiveQueue, (void *)&xCANRxMessage, 0U);
+            // Put the message in the Rx Message Queue
+        }
 
-    	// Delay until 1ms passed since last iteration.
-    	vTaskDelayUntil(&xLastWakeTime, xFrequency);
+        // Delay until 1ms passed since last iteration.
+        vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
 }
 
@@ -303,7 +305,7 @@ void SystemClock_Config(void)
 /* CAN init function */
 static void MX_CAN_Init(void)
 {
-    CAN_FilterConfTypeDef  sFilterConfig;
+    CAN_FilterConfTypeDef sFilterConfig;
 
     hcan.Instance = CAN;
     hcan.Init.Prescaler = 9;
@@ -322,16 +324,16 @@ static void MX_CAN_Init(void)
         _Error_Handler(__FILE__, __LINE__);
     }
 
-     sFilterConfig.FilterNumber = 0;
-     sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
-     sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
-     sFilterConfig.FilterIdHigh = 0x0000;
-     sFilterConfig.FilterIdLow = 0x0000;
-     sFilterConfig.FilterMaskIdHigh = 0x0000;
-     sFilterConfig.FilterMaskIdLow = 0x0000;
-     sFilterConfig.FilterFIFOAssignment = CAN_FILTER_FIFO0;
-     sFilterConfig.FilterActivation = ENABLE;
-     sFilterConfig.BankNumber = 0;
+    sFilterConfig.FilterNumber = 0;
+    sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+    sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+    sFilterConfig.FilterIdHigh = 0x0000;
+    sFilterConfig.FilterIdLow = 0x0000;
+    sFilterConfig.FilterMaskIdHigh = 0x0000;
+    sFilterConfig.FilterMaskIdLow = 0x0000;
+    sFilterConfig.FilterFIFOAssignment = CAN_FILTER_FIFO0;
+    sFilterConfig.FilterActivation = ENABLE;
+    sFilterConfig.BankNumber = 0;
 
     if (HAL_CAN_ConfigFilter(&hcan, &sFilterConfig) != HAL_OK)
     {
@@ -356,11 +358,9 @@ static void MX_GPIO_Init(void)
     __HAL_RCC_GPIOB_CLK_ENABLE();
 }
 
-
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
-
 
 /**
   * @brief  Period elapsed callback in non blocking mode
