@@ -11,6 +11,7 @@
             "type": "cortex-debug",
             "cwd": "${workspaceRoot}",
             "executable": "${workspaceRoot}/build/OpenCAN.elf",
+            "runToMain": true,
             "servertype": "openocd",
             "device": "STM32F303CB",
             "svdFile": "{workspaceRoot}/STM32F303.svd",
