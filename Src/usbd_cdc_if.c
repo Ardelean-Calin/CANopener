@@ -94,8 +94,11 @@
 /* USER CODE BEGIN PRIVATE_DEFINES */
 /* Define size for the receive and transmit buffer over CDC */
 /* It's up to user to redefine and/or remove those define */
-#define APP_RX_DATA_SIZE  1000
-#define APP_TX_DATA_SIZE  1000
+#define APP_RX_DATA_SIZE 1000
+#define APP_TX_DATA_SIZE 1000
+
+// This gives the 'breaking point' in the ring buffer
+#define BYTES_AFTER_RING_INDEX (USB_RX_ENC_PACKET_SIZE - 1 - cRxRingBufferIndex)
 /* USER CODE END PRIVATE_DEFINES */
 
 /**
@@ -129,6 +132,10 @@ uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 
 /* USER CODE BEGIN PRIVATE_VARIABLES */
 
+uint8_t pcRxRingBuffer[USB_RX_ENC_PACKET_SIZE]; // 1 ringbuffer for now to hold the received frame
+uint8_t pcRxEncodedData[USB_RX_ENC_PACKET_SIZE];
+uint8_t cRxRingBufferIndex; // Holds the internal index of the ring buffer
+
 /* USER CODE END PRIVATE_VARIABLES */
 
 /**
@@ -157,9 +164,9 @@ extern USBD_HandleTypeDef hUsbDeviceFS;
 
 static int8_t CDC_Init_FS(void);
 static int8_t CDC_DeInit_FS(void);
-static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length);
-static int8_t CDC_Receive_FS(uint8_t* pbuf, uint32_t *Len);
-uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len);
+static int8_t CDC_Control_FS(uint8_t cmd, uint8_t *pbuf, uint16_t length);
+static int8_t CDC_Receive_FS(uint8_t *pbuf, uint32_t *Len);
+uint8_t CDC_Transmit_FS(uint8_t *Buf, uint16_t Len);
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_DECLARATION */
 
@@ -170,12 +177,11 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len);
   */
 
 USBD_CDC_ItfTypeDef USBD_Interface_fops_FS =
-{
-  CDC_Init_FS,
-  CDC_DeInit_FS,
-  CDC_Control_FS,
-  CDC_Receive_FS
-};
+    {
+        CDC_Init_FS,
+        CDC_DeInit_FS,
+        CDC_Control_FS,
+        CDC_Receive_FS};
 
 /* Private functions ---------------------------------------------------------*/
 /**
@@ -185,9 +191,13 @@ USBD_CDC_ItfTypeDef USBD_Interface_fops_FS =
 static int8_t CDC_Init_FS(void)
 {
   /* USER CODE BEGIN 3 */
+  memset(pcRxRingBuffer, 0U, USB_RX_ENC_PACKET_SIZE);
+  memset(pcRxEncodedData, 0U, USB_RX_ENC_PACKET_SIZE);
+  cRxRingBufferIndex = 0U;
   /* Set Application Buffers */
   USBD_CDC_SetTxBuffer(&hUsbDeviceFS, UserTxBufferFS, 0);
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, UserRxBufferFS);
+
   return (USBD_OK);
   /* USER CODE END 3 */
 }
@@ -210,61 +220,61 @@ static int8_t CDC_DeInit_FS(void)
   * @param  length: Number of data to be sent (in bytes)
   * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL
   */
-static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
+static int8_t CDC_Control_FS(uint8_t cmd, uint8_t *pbuf, uint16_t length)
 {
   /* USER CODE BEGIN 5 */
-  switch(cmd)
+  switch (cmd)
   {
-    case CDC_SEND_ENCAPSULATED_COMMAND:
+  case CDC_SEND_ENCAPSULATED_COMMAND:
 
     break;
 
-    case CDC_GET_ENCAPSULATED_RESPONSE:
+  case CDC_GET_ENCAPSULATED_RESPONSE:
 
     break;
 
-    case CDC_SET_COMM_FEATURE:
+  case CDC_SET_COMM_FEATURE:
 
     break;
 
-    case CDC_GET_COMM_FEATURE:
+  case CDC_GET_COMM_FEATURE:
 
     break;
 
-    case CDC_CLEAR_COMM_FEATURE:
+  case CDC_CLEAR_COMM_FEATURE:
 
     break;
 
-  /*******************************************************************************/
-  /* Line Coding Structure                                                       */
-  /*-----------------------------------------------------------------------------*/
-  /* Offset | Field       | Size | Value  | Description                          */
-  /* 0      | dwDTERate   |   4  | Number |Data terminal rate, in bits per second*/
-  /* 4      | bCharFormat |   1  | Number | Stop bits                            */
-  /*                                        0 - 1 Stop bit                       */
-  /*                                        1 - 1.5 Stop bits                    */
-  /*                                        2 - 2 Stop bits                      */
-  /* 5      | bParityType |  1   | Number | Parity                               */
-  /*                                        0 - None                             */
-  /*                                        1 - Odd                              */
-  /*                                        2 - Even                             */
-  /*                                        3 - Mark                             */
-  /*                                        4 - Space                            */
-  /* 6      | bDataBits  |   1   | Number Data bits (5, 6, 7, 8 or 16).          */
-  /*******************************************************************************/
-    case CDC_SET_LINE_CODING:
+    /*******************************************************************************/
+    /* Line Coding Structure                                                       */
+    /*-----------------------------------------------------------------------------*/
+    /* Offset | Field       | Size | Value  | Description                          */
+    /* 0      | dwDTERate   |   4  | Number |Data terminal rate, in bits per second*/
+    /* 4      | bCharFormat |   1  | Number | Stop bits                            */
+    /*                                        0 - 1 Stop bit                       */
+    /*                                        1 - 1.5 Stop bits                    */
+    /*                                        2 - 2 Stop bits                      */
+    /* 5      | bParityType |  1   | Number | Parity                               */
+    /*                                        0 - None                             */
+    /*                                        1 - Odd                              */
+    /*                                        2 - Even                             */
+    /*                                        3 - Mark                             */
+    /*                                        4 - Space                            */
+    /* 6      | bDataBits  |   1   | Number Data bits (5, 6, 7, 8 or 16).          */
+    /*******************************************************************************/
+  case CDC_SET_LINE_CODING:
 
     break;
 
-    case CDC_GET_LINE_CODING:
+  case CDC_GET_LINE_CODING:
 
     break;
 
-    case CDC_SET_CONTROL_LINE_STATE:
+  case CDC_SET_CONTROL_LINE_STATE:
 
     break;
 
-    case CDC_SEND_BREAK:
+  case CDC_SEND_BREAK:
 
     break;
 
@@ -290,31 +300,39 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
   * @param  Len: Number of data received (in bytes)
   * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL
   */
-static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
+static int8_t CDC_Receive_FS(uint8_t *Buf, uint32_t *Len)
 {
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
 
-  // Check for start and stop value of our Serial Protocol
-  if (Buf[0] != USB_RX_START_VALUE || Buf[*Len - 1] != USB_RX_END_VALUE){
-    return USBD_FAIL;
+  for (uint8_t index = 0; index < *Len; index++)
+  {
+    // For each received byte, put it in the ringbuffer index and once the EOF
+    // is reached, notify the queue that new data is ready to be processed.
+    uint8_t currentByte = Buf[index];
+
+    // Just a simple ring buffer functionality
+    pcRxRingBuffer[cRxRingBufferIndex] = currentByte;
+
+    if (currentByte == 0x00)
+    {
+      // We have hit an end-of-frame. Copy the encoded data.
+      memcpy(&pcRxEncodedData[0],
+             &pcRxRingBuffer[cRxRingBufferIndex + 1],
+             BYTES_AFTER_RING_INDEX);
+      memcpy(&pcRxEncodedData[BYTES_AFTER_RING_INDEX],
+             &pcRxRingBuffer[0],
+             cRxRingBufferIndex + 1);
+
+      // Spoiler alert: we ARE inside an ISR right now. Who knew?
+      BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+      // Store a pointer to the RX structure in the queue
+      xQueueSendToFrontFromISR(xUSBReceiveQueue, (void *)pcRxEncodedData, &xHigherPriorityTaskWoken);
+      portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    }
+
+    cRxRingBufferIndex = (cRxRingBufferIndex + 1) % USB_RX_ENC_PACKET_SIZE;
   }
-
-  // Allocate memory for this structure
-  xUSB_RX_Message_t *xUSBMessage = &xRxRingBuffer[cRingBufferIndex];
-
-  cRingBufferIndex++;
-  cRingBufferIndex = cRingBufferIndex % 10;
-
-  xUSBMessage->cCmd = Buf[1];
-  memcpy(xUSBMessage->cData, (const void*) &Buf[2], USB_RX_DATA_PACKET_SIZE);
-
-  // Spoiler alert: we ARE inside an ISR right now. Who knew?
-  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-  // Store a pointer to the RX structure in the queue
-  xQueueSendToFrontFromISR(xUSBReceiveQueue, (void*) &(xUSBMessage), &xHigherPriorityTaskWoken);
-  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 
   return USBD_OK;
   /* USER CODE END 6 */
@@ -331,12 +349,13 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
   * @param  Len: Number of data to be sent (in bytes)
   * @retval USBD_OK if all operations are OK else USBD_FAIL or USBD_BUSY
   */
-uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
+uint8_t CDC_Transmit_FS(uint8_t *Buf, uint16_t Len)
 {
   uint8_t result = USBD_OK;
   /* USER CODE BEGIN 7 */
-  USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)hUsbDeviceFS.pClassData;
-  if (hcdc->TxState != 0){
+  USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef *)hUsbDeviceFS.pClassData;
+  if (hcdc->TxState != 0)
+  {
     return USBD_BUSY;
   }
   USBD_CDC_SetTxBuffer(&hUsbDeviceFS, Buf, Len);

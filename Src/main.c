@@ -54,6 +54,7 @@
 #include "usbd_cdc_if.h"
 #include "RTE.h"
 #include "typedefs.h"
+#include "cobs.h"
 /* Private variables ---------------------------------------------------------*/
 
 osThreadId defaultTaskHandle;
@@ -97,7 +98,7 @@ int main(void)
 
     vTraceEnable(TRC_START);
 
-    cRingBufferIndex = 0;
+    /* Initialize RTE global variables */
 
     /* USER CODE BEGIN RTOS_THREADS */
     xTaskCreate(vUSBRxDecoderTask, "USB_RX_DECODER", 64, NULL, 1, NULL);
@@ -107,13 +108,11 @@ int main(void)
     /* USER CODE END RTOS_THREADS */
 
     /* USER CODE BEGIN RTOS_QUEUES */
-    xUSBReceiveQueue = xQueueCreate(USB_RX_BUFFER_SIZE, sizeof(xUSB_RX_Message_t *));
-    xUSBTransmitQueue = xQueueCreate(USB_TX_BUFFER_SIZE, sizeof(xUSB_TX_Message_t *));
+    xUSBReceiveQueue = xQueueCreate(1, USB_RX_ENC_PACKET_SIZE);
     xCANReceiveQueue = xQueueCreate(CAN_RX_BUFFER_SIZE, sizeof(CanRxMsgTypeDef *));
     xCANTransmitQueue = xQueueCreate(CAN_TX_BUFFER_SIZE, sizeof(CanTxMsgTypeDef *));
 
     vQueueAddToRegistry(xUSBReceiveQueue, "USB Receive Queue");
-    vQueueAddToRegistry(xUSBTransmitQueue, "USB Transmit Queue");
     vQueueAddToRegistry(xCANReceiveQueue, "CAN Receive Queue");
     vQueueAddToRegistry(xCANTransmitQueue, "CAN Transmit Queue");
     /* USER CODE END RTOS_QUEUES */
@@ -130,18 +129,22 @@ int main(void)
 
 void vUSBRxDecoderTask(void *const pvParameters)
 {
-    xUSB_RX_Message_t *xUSBMessage;
+    uint8_t pcEncodedUSBMessage[USB_RX_ENC_PACKET_SIZE];
+    uint8_t pcDecodedUSBMessage[USB_RX_DEC_PACKET_SIZE];
     CanTxMsgTypeDef *xTXMessage;
 
     for (;;)
     {
-        xQueueReceive(xUSBReceiveQueue, &(xUSBMessage), portMAX_DELAY);
+        // Wait forever for an item in the queue to come.
+        xQueueReceive(xUSBReceiveQueue, pcEncodedUSBMessage, portMAX_DELAY);
+        // Decode the COBS-encoded data
+        ucUnStuffData(pcEncodedUSBMessage, USB_RX_ENC_PACKET_SIZE, pcDecodedUSBMessage);
 
         // TODO: Ring buffer of X elements (10 maybe for starters?)
         xTXMessage = &xCANTransmitBuffer[0];
 
-        uint8_t cCmd = xUSBMessage->cCmd;
-        uint8_t *cData = xUSBMessage->cData;
+        uint8_t cCmd = pcDecodedUSBMessage[0];
+        uint8_t *cData = &pcDecodedUSBMessage[1];
 
         switch (cCmd)
         {
@@ -167,21 +170,25 @@ void vUSBRxDecoderTask(void *const pvParameters)
 void vCANRxEncoderTask(void *const pvParameters)
 {
     CanRxMsgTypeDef *xCANRxMessage;
-    uint8_t xTXMessage[12];
-
-    xTXMessage[0] = USB_TX_START_VALUE;
-    xTXMessage[USB_TX_DATA_PACKET_SIZE - 1] = USB_TX_END_VALUE;
+    uint8_t pcUSBEncodedMessage[USB_TX_ENC_PACKET_SIZE];
+    uint8_t pcUSBDecodedMessage[USB_TX_DEC_PACKET_SIZE];
 
     for (;;)
     {
+        // Wait forever for a new CAN message
         xQueueReceive(xCANReceiveQueue, &xCANRxMessage, portMAX_DELAY);
-        // Encode DLC, CAN ID and CAN DATA inside the message
-        xTXMessage[1] = (xCANRxMessage->DLC << 4) + (xCANRxMessage->StdId >> 8);
-        xTXMessage[2] = xCANRxMessage->StdId;
-        memcpy(&xTXMessage[3], &xCANRxMessage->Data[0], 8U);
 
-        // Now we need to encode a serial message and send it via USB
-        CDC_Transmit_FS(&xTXMessage, USB_TX_DATA_PACKET_SIZE);
+        // Store DLC, CAN ID and CAN DATA inside the message
+        pcUSBDecodedMessage[0] = (xCANRxMessage->DLC << 4) + (xCANRxMessage->StdId >> 8);
+        pcUSBDecodedMessage[1] = xCANRxMessage->StdId;
+        memcpy(&pcUSBDecodedMessage[2], &xCANRxMessage->Data[0], 8U);
+
+        // Encode using COBS encoding algorithm
+        ucStuffData(pcUSBDecodedMessage, USB_TX_DEC_PACKET_SIZE, pcUSBEncodedMessage);
+        pcUSBEncodedMessage[USB_TX_ENC_PACKET_SIZE - 1] = 0U;
+
+        // Now we send the encoded message via USB.
+        CDC_Transmit_FS(pcUSBEncodedMessage, USB_TX_ENC_PACKET_SIZE);
     }
 }
 /*

@@ -12,9 +12,6 @@
 #include "queue.h"
 #include "typedefs.h"
 
-xUSB_RX_Message_t xRxRingBuffer[USB_RX_BUFFER_SIZE];
-uint8_t cRingBufferIndex;
-
 CanTxMsgTypeDef xCANTransmitBuffer[CAN_TX_BUFFER_SIZE];
 CanRxMsgTypeDef xCANReceiveBuffer[CAN_RX_BUFFER_SIZE];
 
@@ -22,12 +19,12 @@ CanRxMsgTypeDef xCANReceiveBuffer[CAN_RX_BUFFER_SIZE];
 CAN_HandleTypeDef hcan;
 
 // Queues
-QueueHandle_t xUSBTransmitQueue;
 QueueHandle_t xUSBReceiveQueue;
 QueueHandle_t xCANTransmitQueue;
 QueueHandle_t xCANReceiveQueue;
 
-enum {
+enum
+{
   CAN_SEND = 0,
   CAN_SET_BAUDRATE
 };
