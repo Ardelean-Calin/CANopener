@@ -316,7 +316,7 @@ static void MX_CAN_Init(void)
 
     hcan.Instance = CAN;
     hcan.Init.Prescaler = 9;
-    hcan.Init.Mode = CAN_MODE_NORMAL;
+    hcan.Init.Mode = CAN_MODE_LOOPBACK;
     hcan.Init.SJW = CAN_SJW_1TQ;
     hcan.Init.BS1 = CAN_BS1_6TQ;
     hcan.Init.BS2 = CAN_BS1_1TQ;
