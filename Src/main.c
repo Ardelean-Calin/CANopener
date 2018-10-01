@@ -138,7 +138,7 @@ void vUSBRxDecoderTask(void *const pvParameters)
         // Decode the COBS-encoded data
         ucUnStuffData(pcEncodedUSBMessage, USB_RX_ENC_PACKET_SIZE, pcDecodedUSBMessage);
 
-        // TODO: Ring buffer of X elements (10 maybe for starters?)
+        // TODO Ring buffer of X elements (10 maybe for starters?)
         xTXMessage = &xCANTransmitBuffer[0];
 
         uint8_t cCmd = pcDecodedUSBMessage[0];
@@ -191,7 +191,7 @@ void vCANRxEncoderTask(void *const pvParameters)
 }
 /*
  * This task transmits the CAN messages scheduled for transmission.
- * TODO: Have the ringbuffer index get locked and unlocked using a binary semaphore or something
+ * TODO Have the ringbuffer index get locked and unlocked using a binary semaphore or something
  */
 void vCANTransmitTask(void *const pvParameters)
 {
@@ -200,7 +200,7 @@ void vCANTransmitTask(void *const pvParameters)
     {
         xQueueReceive(xCANTransmitQueue, &xCANTxMessage, portMAX_DELAY);
         hcan.pTxMsg = xCANTxMessage;
-        // TODO: What timeout should I put?
+        // TODO What timeout should I put?
         HAL_CAN_Transmit(&hcan, 0);
     }
 }
@@ -215,7 +215,7 @@ void vCANReceiveTask(void *const pvParameters)
     // Initialize the xLastWakeTime variable with the current time.
     xLastWakeTime = xTaskGetTickCount();
 
-    // TODO: Maybe also monitor FIFO overrun errors? HAL_CAN_ERROR_FOV0
+    // TODO Maybe also monitor FIFO overrun errors? HAL_CAN_ERROR_FOV0
     CanRxMsgTypeDef *xCANRxMessage = &xCANReceiveBuffer[0];
     // Basically set in which structure to receive the CAN message
     hcan.pRxMsg = xCANRxMessage;
