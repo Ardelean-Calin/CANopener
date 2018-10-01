@@ -6,11 +6,17 @@
         {
             "label": "BUILD_DEBUG",
             "type": "shell",
-            "dependsOn": "BUILD_CLEAN",
             "command": "make DEBUG=1",
             "group": {
                 "kind": "build",
-                "isDefault": true
+                "isDefault": true,
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true
             }
         },
         {
