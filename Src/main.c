@@ -57,8 +57,6 @@
 #include "cobs.h"
 /* Private variables ---------------------------------------------------------*/
 
-osThreadId defaultTaskHandle;
-
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
