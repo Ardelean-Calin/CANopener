@@ -14,7 +14,7 @@
             "runToMain": true,
             "servertype": "openocd",
             "device": "STM32F303CB",
-            "svdFile": "{workspaceRoot}/STM32F303.svd",
+            "svdFile": "${workspaceRoot}/STM32F303.svd",
             "configFiles": [
                 "${workspaceRoot}/OpenCAN Debug.cfg"
             ]
