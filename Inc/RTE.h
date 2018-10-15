@@ -25,8 +25,11 @@ QueueHandle_t xCANReceiveQueue;
 
 enum
 {
-  CAN_SEND = 0,
-  CAN_SET_BAUDRATE
+  RX_CAN_SEND = 0,
+  TX_CAN_RECV,
+  RX_ACK_REQUEST,
+  TX_ACK_SEND,
+  RX_CAN_SET_BAUDRATE
 };
 
 #endif /* RTE_H_ */

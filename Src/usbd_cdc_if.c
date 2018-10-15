@@ -98,7 +98,7 @@
 #define APP_TX_DATA_SIZE 1000
 
 // This gives the 'breaking point' in the ring buffer
-#define BYTES_AFTER_RING_INDEX (USB_RX_ENC_PACKET_SIZE - 1 - cRxRingBufferIndex)
+#define BYTES_AFTER_RING_INDEX (USB_ENC_PACKET_SIZE - 1 - cRxRingBufferIndex)
 /* USER CODE END PRIVATE_DEFINES */
 
 /**
@@ -132,9 +132,12 @@ uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 
 /* USER CODE BEGIN PRIVATE_VARIABLES */
 
-uint8_t pcRxRingBuffer[USB_RX_ENC_PACKET_SIZE]; // 1 ringbuffer for now to hold the received frame
-uint8_t pcRxEncodedData[USB_RX_ENC_PACKET_SIZE];
-uint8_t cRxRingBufferIndex; // Holds the internal index of the ring buffer
+// Ringbuffer to hold RX bytes. Order might be weird
+uint8_t pcRxRingBuffer[USB_ENC_PACKET_SIZE];
+// That's why we have another buffer to store the proper order of the bytes
+uint8_t pcRxEncodedData[USB_ENC_PACKET_SIZE];
+// Holds the internal index of the ring buffer
+uint8_t cRxRingBufferIndex;
 
 /* USER CODE END PRIVATE_VARIABLES */
 
@@ -191,8 +194,8 @@ USBD_CDC_ItfTypeDef USBD_Interface_fops_FS =
 static int8_t CDC_Init_FS(void)
 {
   /* USER CODE BEGIN 3 */
-  memset(pcRxRingBuffer, 0U, USB_RX_ENC_PACKET_SIZE);
-  memset(pcRxEncodedData, 0U, USB_RX_ENC_PACKET_SIZE);
+  memset(pcRxRingBuffer, 0U, USB_ENC_PACKET_SIZE);
+  memset(pcRxEncodedData, 0U, USB_ENC_PACKET_SIZE);
   cRxRingBufferIndex = 0U;
   /* Set Application Buffers */
   USBD_CDC_SetTxBuffer(&hUsbDeviceFS, UserTxBufferFS, 0);
@@ -331,7 +334,7 @@ static int8_t CDC_Receive_FS(uint8_t *Buf, uint32_t *Len)
       portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
 
-    cRxRingBufferIndex = (cRxRingBufferIndex + 1) % USB_RX_ENC_PACKET_SIZE;
+    cRxRingBufferIndex = (cRxRingBufferIndex + 1) % USB_ENC_PACKET_SIZE;
   }
 
   return USBD_OK;
