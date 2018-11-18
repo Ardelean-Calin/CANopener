@@ -20,6 +20,7 @@ CAN_HandleTypeDef hcan;
 
 // Queues
 QueueHandle_t xUSBReceiveQueue;
+QueueHandle_t xUSBTransmitQueue;
 QueueHandle_t xCANTransmitQueue;
 QueueHandle_t xCANReceiveQueue;
 

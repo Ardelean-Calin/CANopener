@@ -10,4 +10,10 @@
 #define USB_DEC_PACKET_SIZE (16U)
 #define USB_ENC_PACKET_SIZE (USB_DEC_PACKET_SIZE + 2)
 
+typedef struct
+{
+    uint8_t ucSize;
+    uint8_t pucData[USB_DEC_PACKET_SIZE];
+} xUSBTxFrame_t;
+
 #endif

@@ -56,7 +56,7 @@
 #include "typedefs.h"
 #include "cobs.h"
 /* Private variables ---------------------------------------------------------*/
-
+static const char* cResponseOK = "Ardelean Calin";
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
@@ -66,6 +66,7 @@ void USB_DEVICE_MasterHardReset(void);
 
 // Tasks
 void vUSBRxDecoderTask(void *const pvParameters);
+void vUSBTransmitTask(void *const pvParameters);
 void vCANRxEncoderTask(void *const pvParameters);
 void vCANTransmitTask(void *const pvParameters);
 void vCANReceiveTask(void *const pvParameters);
@@ -96,21 +97,21 @@ int main(void)
 
     vTraceEnable(TRC_START);
 
-    /* Initialize RTE global variables */
-
-    /* USER CODE BEGIN RTOS_THREADS */
+    // Start tasks
     xTaskCreate(vUSBRxDecoderTask, "USB_RX_DECODER", 64, NULL, 1, NULL);
+    xTaskCreate(vUSBTransmitTask, "USB_TRANSMIT", 64, NULL, 1, NULL);
     xTaskCreate(vCANRxEncoderTask, "CAN_RX_ENCODER", 64, NULL, 4, NULL);
     xTaskCreate(vCANTransmitTask, "CAN_TRANSMIT", 64, NULL, 3, NULL);
     xTaskCreate(vCANReceiveTask, "CAN_RECEIVE", 64, NULL, 1, NULL);
-    /* USER CODE END RTOS_THREADS */
 
     /* USER CODE BEGIN RTOS_QUEUES */
     xUSBReceiveQueue = xQueueCreate(1, USB_ENC_PACKET_SIZE);
+    xUSBTransmitQueue = xQueueCreate(1, sizeof(xUSBTxFrame_t *));
     xCANReceiveQueue = xQueueCreate(CAN_RX_BUFFER_SIZE, sizeof(CanRxMsgTypeDef *));
     xCANTransmitQueue = xQueueCreate(CAN_TX_BUFFER_SIZE, sizeof(CanTxMsgTypeDef *));
 
     vQueueAddToRegistry(xUSBReceiveQueue, "USB Receive Queue");
+    vQueueAddToRegistry(xUSBTransmitQueue, "USB Transmit Queue");
     vQueueAddToRegistry(xCANReceiveQueue, "CAN Receive Queue");
     vQueueAddToRegistry(xCANTransmitQueue, "CAN Transmit Queue");
     /* USER CODE END RTOS_QUEUES */
@@ -125,6 +126,29 @@ int main(void)
     }
 }
 
+void vUSBTransmitTask(void *const pvParameters)
+{
+    uint8_t pcUSBEncodedMessage[USB_ENC_PACKET_SIZE];
+    xUSBTxFrame_t *pxUSBTransmitFrame;
+    for (;;)
+    {
+        xQueueReceive(xUSBTransmitQueue, &pxUSBTransmitFrame, portMAX_DELAY);
+
+        // Fill unused bytes with 0xFF
+        if (pxUSBTransmitFrame->ucSize < USB_DEC_PACKET_SIZE)
+        {
+            memset(&pxUSBTransmitFrame->pucData[pxUSBTransmitFrame->ucSize], 255U, USB_DEC_PACKET_SIZE - pxUSBTransmitFrame->ucSize);
+        }
+
+        // Encode using COBS encoding algorithm
+        ucStuffData(&pxUSBTransmitFrame->pucData[0], USB_DEC_PACKET_SIZE, &pcUSBEncodedMessage[0]);
+        pcUSBEncodedMessage[USB_ENC_PACKET_SIZE - 1] = 0U;
+
+        // Now we send the encoded message via USB.
+        CDC_Transmit_FS(pcUSBEncodedMessage, USB_ENC_PACKET_SIZE);
+    }
+}
+
 void vUSBRxDecoderTask(void *const pvParameters)
 {
     uint8_t pcEncodedUSBMessage[USB_ENC_PACKET_SIZE];
@@ -134,8 +158,11 @@ void vUSBRxDecoderTask(void *const pvParameters)
     uint32_t ucCanID;
     uint8_t ucDLC;
 
-    CanTxMsgTypeDef *xTXMessage;
-    xTXMessage = &xCANTransmitBuffer[0];
+    CanTxMsgTypeDef *pxTXMessage;
+    pxTXMessage = &xCANTransmitBuffer[0];
+
+    xUSBTxFrame_t xUSBTransmitFrame;
+    xUSBTxFrame_t * pxUSBTransmitFrame = &xUSBTransmitFrame;
 
     for (;;)
     {
@@ -153,29 +180,35 @@ void vUSBRxDecoderTask(void *const pvParameters)
             // Master wants us to send a message
             ucIsExtended = pcDecodedUSBMessage[1];
             ucCanID = (pcDecodedUSBMessage[2] << 24) +
-                               (pcDecodedUSBMessage[3] << 16) +
-                               (pcDecodedUSBMessage[4] << 8) +
-                               (pcDecodedUSBMessage[5]);
+                      (pcDecodedUSBMessage[3] << 16) +
+                      (pcDecodedUSBMessage[4] << 8) +
+                      (pcDecodedUSBMessage[5]);
             ucDLC = pcDecodedUSBMessage[6];
-            xTXMessage->DLC = ucDLC;
+            pxTXMessage->DLC = ucDLC;
 
             if (ucIsExtended)
             {
-                xTXMessage->IDE = CAN_ID_EXT;
-                xTXMessage->ExtId = ucCanID;
+                pxTXMessage->IDE = CAN_ID_EXT;
+                pxTXMessage->ExtId = ucCanID;
             }
             else
             {
-                xTXMessage->IDE = CAN_ID_STD;
-                xTXMessage->StdId = ucCanID;
+                pxTXMessage->IDE = CAN_ID_STD;
+                pxTXMessage->StdId = ucCanID;
             }
-            xTXMessage->RTR = (uint32_t)CAN_RTR_DATA;
+            pxTXMessage->RTR = (uint32_t)CAN_RTR_DATA;
 
-            memcpy(&xTXMessage->Data[0], &pcDecodedUSBMessage[7], 8);
-            xQueueSend(xCANTransmitQueue, (void *)&xTXMessage, 0);
+            memcpy(&pxTXMessage->Data[0], &pcDecodedUSBMessage[7], 8);
+            xQueueSend(xCANTransmitQueue, (void *)&pxTXMessage, 0);
             break;
         case RX_ACK_REQUEST:
-        // TODO: Connect request => send some message back.
+            xUSBTransmitFrame.pucData[0] = TX_ACK_SEND;
+            memcpy(xUSBTransmitFrame.pucData + 1, (void*) cResponseOK, strlen(cResponseOK));
+
+            xUSBTransmitFrame.ucSize = strlen(cResponseOK) + 1;
+            xQueueSend(xUSBTransmitQueue, (void*) &pxUSBTransmitFrame, 0U);
+            break;
+        // TODO: Change baudrate
         case RX_CAN_SET_BAUDRATE:
         default:
             break;
@@ -190,9 +223,10 @@ void vUSBRxDecoderTask(void *const pvParameters)
 void vCANRxEncoderTask(void *const pvParameters)
 {
     CanRxMsgTypeDef *xCANRxMessage;
-    uint8_t pcUSBEncodedMessage[USB_ENC_PACKET_SIZE];
-    uint8_t pcUSBDecodedMessage[USB_DEC_PACKET_SIZE];
     uint32_t ucCanID;
+
+    xUSBTxFrame_t xUSBTransmitFrame;
+    xUSBTxFrame_t *pxUSBTransmitFrame = &xUSBTransmitFrame;
 
     for (;;)
     {
@@ -200,9 +234,9 @@ void vCANRxEncoderTask(void *const pvParameters)
         xQueueReceive(xCANReceiveQueue, &xCANRxMessage, portMAX_DELAY);
 
         // Type/Command
-        pcUSBDecodedMessage[0] = TX_CAN_RECV;
+        xUSBTransmitFrame.pucData[0] = TX_CAN_RECV;
         // Flags - Extended
-        pcUSBDecodedMessage[1] = xCANRxMessage->IDE >> 2;
+        xUSBTransmitFrame.pucData[1] = xCANRxMessage->IDE >> 2;
         // CAN ID
         if (xCANRxMessage->IDE)
         {
@@ -213,21 +247,19 @@ void vCANRxEncoderTask(void *const pvParameters)
         {
             ucCanID = xCANRxMessage->StdId;
         }
-        pcUSBDecodedMessage[2] = (ucCanID & 0xFF000000) >> 24;
-        pcUSBDecodedMessage[3] = (ucCanID & 0x00FF0000) >> 16;
-        pcUSBDecodedMessage[4] = (ucCanID & 0x0000FF00) >> 8;
-        pcUSBDecodedMessage[5] = (ucCanID & 0x000000FF);
+        xUSBTransmitFrame.pucData[2] = (ucCanID & 0xFF000000) >> 24;
+        xUSBTransmitFrame.pucData[3] = (ucCanID & 0x00FF0000) >> 16;
+        xUSBTransmitFrame.pucData[4] = (ucCanID & 0x0000FF00) >> 8;
+        xUSBTransmitFrame.pucData[5] = (ucCanID & 0x000000FF);
         // DLC
-        pcUSBDecodedMessage[6] = xCANRxMessage->DLC;
+        xUSBTransmitFrame.pucData[6] = xCANRxMessage->DLC;
         // Data
-        memcpy(&pcUSBDecodedMessage[7], &xCANRxMessage->Data[0], 8U);
+        memcpy(&xUSBTransmitFrame.pucData[7], &xCANRxMessage->Data[0], 8U);
 
-        // Encode using COBS encoding algorithm
-        ucStuffData(pcUSBDecodedMessage, USB_DEC_PACKET_SIZE, pcUSBEncodedMessage);
-        pcUSBEncodedMessage[USB_ENC_PACKET_SIZE - 1] = 0U;
+        xUSBTransmitFrame.ucSize = USB_DEC_PACKET_SIZE;
 
-        // Now we send the encoded message via USB.
-        CDC_Transmit_FS(pcUSBEncodedMessage, USB_ENC_PACKET_SIZE);
+        // Send to transmit task
+        xQueueSend(xUSBTransmitQueue, (void *)&pxUSBTransmitFrame, 0U);
     }
 }
 /*
@@ -252,7 +284,7 @@ void vCANTransmitTask(void *const pvParameters)
 void vCANReceiveTask(void *const pvParameters)
 {
     TickType_t xLastWakeTime;
-    const TickType_t xFrequency = 1;
+    TickType_t xFrequency = 1;
     // Initialize the xLastWakeTime variable with the current time.
     xLastWakeTime = xTaskGetTickCount();
 
@@ -306,6 +338,7 @@ void SystemClock_Config(void)
     */
     RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
     RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
+    // RCC_OscInitStruct.HSEState = RCC_HSE_ON; // TODO
     RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV2;
     RCC_OscInitStruct.HSIState = RCC_HSI_ON;
     RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
@@ -355,7 +388,7 @@ static void MX_CAN_Init(void)
 
     hcan.Instance = CAN;
     hcan.Init.Prescaler = 9;
-    hcan.Init.Mode = CAN_MODE_NORMAL;
+    hcan.Init.Mode = CAN_MODE_LOOPBACK;
     hcan.Init.SJW = CAN_SJW_1TQ;
     hcan.Init.BS1 = CAN_BS1_6TQ;
     hcan.Init.BS2 = CAN_BS1_1TQ;
