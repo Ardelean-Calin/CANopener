@@ -56,7 +56,8 @@
 #include "typedefs.h"
 #include "cobs.h"
 /* Private variables ---------------------------------------------------------*/
-static const char* cResponseOK = "Ardelean Calin";
+static const char *cResponseOK = "Ardelean Calin";
+static TimerHandle_t xStatusTimer;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
@@ -70,6 +71,8 @@ void vUSBTransmitTask(void *const pvParameters);
 void vCANRxEncoderTask(void *const pvParameters);
 void vCANTransmitTask(void *const pvParameters);
 void vCANReceiveTask(void *const pvParameters);
+// Timers
+void vStatusBlinkTimer(TimerHandle_t xTimer);
 
 /**
   * @brief  The application entry point.
@@ -92,24 +95,37 @@ int main(void)
     MX_CAN_Init();
 
     /* init code for USB_DEVICE */
+    #ifdef DEBUG
     USB_DEVICE_MasterHardReset();
+    #endif
     MX_USB_DEVICE_Init();
 
-    vTraceEnable(TRC_START);
+    // vTraceEnable(TRC_START);
 
-    // Start tasks
-    xTaskCreate(vUSBRxDecoderTask, "USB_RX_DECODER", 64, NULL, 1, NULL);
-    xTaskCreate(vUSBTransmitTask, "USB_TRANSMIT", 64, NULL, 1, NULL);
-    xTaskCreate(vCANRxEncoderTask, "CAN_RX_ENCODER", 64, NULL, 4, NULL);
+    // Create tasks
+    xTaskCreate(vUSBRxDecoderTask, "USB_RX_DECODER", 64, NULL, 3, NULL);
+    xTaskCreate(vUSBTransmitTask, "USB_TRANSMIT", 64, NULL, 3, NULL);
+    xTaskCreate(vCANRxEncoderTask, "CAN_RX_ENCODER", 64, NULL, 3, NULL);
     xTaskCreate(vCANTransmitTask, "CAN_TRANSMIT", 64, NULL, 3, NULL);
-    xTaskCreate(vCANReceiveTask, "CAN_RECEIVE", 64, NULL, 1, NULL);
+    xTaskCreate(vCANReceiveTask, "CAN_RECEIVE", 64, NULL, 2, NULL);
+
+    // Create status timer (software-timer)
+    xStatusTimer = xTimerCreate(
+        "Status_Timer",
+        pdMS_TO_TICKS(35),
+        pdTRUE,
+        /* The ID is used to store a count of the
+                     number of times the timer has expired, which
+                     is initialised to 0. */
+        (void *)0,
+        vStatusBlinkTimer);
 
     /* USER CODE BEGIN RTOS_QUEUES */
     xUSBReceiveQueue = xQueueCreate(1, USB_ENC_PACKET_SIZE);
     xUSBTransmitQueue = xQueueCreate(1, sizeof(xUSBTxFrame_t *));
     xCANReceiveQueue = xQueueCreate(CAN_RX_BUFFER_SIZE, sizeof(CanRxMsgTypeDef *));
     xCANTransmitQueue = xQueueCreate(CAN_TX_BUFFER_SIZE, sizeof(CanTxMsgTypeDef *));
-
+    // Add queues to registry
     vQueueAddToRegistry(xUSBReceiveQueue, "USB Receive Queue");
     vQueueAddToRegistry(xUSBTransmitQueue, "USB Transmit Queue");
     vQueueAddToRegistry(xCANReceiveQueue, "CAN Receive Queue");
@@ -133,6 +149,9 @@ void vUSBTransmitTask(void *const pvParameters)
     for (;;)
     {
         xQueueReceive(xUSBTransmitQueue, &pxUSBTransmitFrame, portMAX_DELAY);
+        // Blink Status LED 10 times
+        vTimerSetTimerID(xStatusTimer, (void *)0);
+        xTimerReset(xStatusTimer, 0U);
 
         // Fill unused bytes with 0xFF
         if (pxUSBTransmitFrame->ucSize < USB_DEC_PACKET_SIZE)
@@ -162,12 +181,15 @@ void vUSBRxDecoderTask(void *const pvParameters)
     pxTXMessage = &xCANTransmitBuffer[0];
 
     xUSBTxFrame_t xUSBTransmitFrame;
-    xUSBTxFrame_t * pxUSBTransmitFrame = &xUSBTransmitFrame;
+    xUSBTxFrame_t *pxUSBTransmitFrame = &xUSBTransmitFrame;
 
     for (;;)
     {
         // Wait forever for an item in the queue to come.
         xQueueReceive(xUSBReceiveQueue, pcEncodedUSBMessage, portMAX_DELAY);
+        // Blink status LED
+        vTimerSetTimerID(xStatusTimer, (void *)0);
+        xTimerReset(xStatusTimer, 0U);
         // Decode the COBS-encoded data
         ucUnStuffData(pcEncodedUSBMessage, USB_ENC_PACKET_SIZE, pcDecodedUSBMessage);
 
@@ -203,10 +225,10 @@ void vUSBRxDecoderTask(void *const pvParameters)
             break;
         case RX_ACK_REQUEST:
             xUSBTransmitFrame.pucData[0] = TX_ACK_SEND;
-            memcpy(xUSBTransmitFrame.pucData + 1, (void*) cResponseOK, strlen(cResponseOK));
+            memcpy(xUSBTransmitFrame.pucData + 1, (void *)cResponseOK, strlen(cResponseOK));
 
             xUSBTransmitFrame.ucSize = strlen(cResponseOK) + 1;
-            xQueueSend(xUSBTransmitQueue, (void*) &pxUSBTransmitFrame, 0U);
+            xQueueSend(xUSBTransmitQueue, (void *)&pxUSBTransmitFrame, 0U);
             break;
         // TODO: Change baudrate
         case RX_CAN_SET_BAUDRATE:
@@ -279,15 +301,11 @@ void vCANTransmitTask(void *const pvParameters)
 }
 
 /*
- * CAN Receive Task. Runs every 1 ms.
+ * CAN Receive Task. Continously checks for new CAN message. Lowest priority
+ * as to preemtively shedule the processing to higher priority tasks
  */
 void vCANReceiveTask(void *const pvParameters)
 {
-    TickType_t xLastWakeTime;
-    TickType_t xFrequency = 1;
-    // Initialize the xLastWakeTime variable with the current time.
-    xLastWakeTime = xTaskGetTickCount();
-
     // TODO Maybe also monitor FIFO overrun errors? HAL_CAN_ERROR_FOV0
     CanRxMsgTypeDef *xCANRxMessage = &xCANReceiveBuffer[0];
     // Basically set in which structure to receive the CAN message
@@ -303,11 +321,41 @@ void vCANReceiveTask(void *const pvParameters)
             // Send a pointer to the CAN RX message as payload since it's big
             // and would take a lot of time to just copy it.
             xQueueSend(xCANReceiveQueue, (void *)&xCANRxMessage, 0U);
-            // Put the message in the Rx Message Queue
         }
+    }
+}
 
-        // Delay until 1ms passed since last iteration.
-        vTaskDelayUntil(&xLastWakeTime, xFrequency);
+/*
+ * Status LED Timer. Will blink the LED 10 times.
+ */
+void vStatusBlinkTimer(TimerHandle_t xTimer)
+{
+    const uint32_t ulMaxExpiryCountBeforeStopping = 10;
+    uint32_t ulCount;
+    /* The number of times this timer has expired is saved as the
+    timer's ID.  Obtain the count. */
+    ulCount = (uint32_t)pvTimerGetTimerID(xTimer);
+
+    /* Increment the count, then test to see if the timer has expired
+    ulMaxExpiryCountBeforeStopping yet. */
+    ulCount++;
+
+    /* If the timer has expired 10 times then stop it from running. */
+    if (ulCount >= ulMaxExpiryCountBeforeStopping)
+    {
+        /* Do not use a block time if calling a timer API function
+        from a timer callback function, as doing so could cause a
+        deadlock! */
+        xTimerStop(xTimer, 0);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);
+    }
+    else
+    {
+        /* Store the incremented count back into the timer's ID field
+       so it can be read back again the next time this software timer
+       expires. */
+        vTimerSetTimerID(xTimer, (void *)ulCount);
+        HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_10);
     }
 }
 
@@ -319,7 +367,7 @@ void USB_DEVICE_MasterHardReset(void)
     GPIO_InitStruct.Pull = GPIO_PULLDOWN;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, 0);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, GPIO_PIN_RESET);
     HAL_Delay(1000);
 }
 
@@ -337,8 +385,11 @@ void SystemClock_Config(void)
     /**Initializes the CPU, AHB and APB busses clocks 
     */
     RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+    #ifdef DEBUG
     RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
-    // RCC_OscInitStruct.HSEState = RCC_HSE_ON; // TODO
+    #else
+    RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+    #endif
     RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV2;
     RCC_OscInitStruct.HSIState = RCC_HSI_ON;
     RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
@@ -388,7 +439,11 @@ static void MX_CAN_Init(void)
 
     hcan.Instance = CAN;
     hcan.Init.Prescaler = 9;
+    #ifdef DEBUG
     hcan.Init.Mode = CAN_MODE_LOOPBACK;
+    #else
+    hcan.Init.Mode = CAN_MODE_NORMAL;
+    #endif
     hcan.Init.SJW = CAN_SJW_1TQ;
     hcan.Init.BS1 = CAN_BS1_6TQ;
     hcan.Init.BS2 = CAN_BS1_1TQ;
@@ -435,6 +490,16 @@ static void MX_GPIO_Init(void)
     __HAL_RCC_GPIOF_CLK_ENABLE();
     __HAL_RCC_GPIOA_CLK_ENABLE();
     __HAL_RCC_GPIOB_CLK_ENABLE();
+
+    GPIO_InitTypeDef xStatusPin = {
+        .Pin = GPIO_PIN_10,
+        .Mode = GPIO_MODE_OUTPUT_PP,
+        .Pull = GPIO_PULLDOWN,
+        .Speed = GPIO_SPEED_FREQ_LOW,
+    };
+    HAL_GPIO_Init(GPIOB, &xStatusPin);
+    // LED on by default. Shows everything is fine.
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);
 }
 
 /* USER CODE BEGIN 4 */

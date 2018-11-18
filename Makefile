@@ -37,7 +37,7 @@ LDFLAGS = -T"STM32F303CBTx_FLASH.ld" -Wl,-Map,$(OUT_NAME).map -mcpu=cortex-m4 -m
 ASFLAGS = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
 
 # Debug flags. By default, debug is disabled
-CFLAGS_DEBUG = -g3 -Og
+CFLAGS_DEBUG = -g3 -Og -DDEBUG
 LDFLAGS_DEBUG =
 ASFLAGS_DEBUG = -g
 
@@ -72,6 +72,8 @@ SOURCES = $(call rwildcard,Drivers,*.c) \
 		  $(call rwildcard,Src,*.c) \
 		  $(call rwildcard,TracealyzerLib,*.c) \
 		  startup/startup_stm32f303xc.s
+INCLUDES = $(call rwildcard,Inc,*.h) \
+		   $(call rwildcard,Middlewares,*.h)
 # And the equivalend object files to be created
 OBJECTS = $(patsubst %.s,%.o,$(patsubst %.c,%.o,$(SOURCES)))
 
@@ -87,7 +89,8 @@ $(OUT_DIR):
 	$(MKDIR_P) $(OUT_DIR)
 
 # Program will just generate an .elf in the given output folder
-elf: directories $(ELF)
+# Depends on SOURCES and INCLUDES so that any change to those will prompt rebuild
+elf: directories $(ELF) $(SOURCES) $(INCLUDES)
 
 # Hex will generate an .hex from the .elf
 hex: $(ELF)
