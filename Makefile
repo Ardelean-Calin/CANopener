@@ -10,10 +10,15 @@ rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
 CC = arm-none-eabi-gcc
 AS = arm-none-eabi-as
 LD = arm-none-eabi-gcc
+OBJCOPY = arm-none-eabi-objcopy
 
 # Output file name and location
-OUT_NAME = OpenCAN.elf
+OUT_NAME = OpenCAN
 OUT_DIR = build
+
+ELF = $(OUT_DIR)/$(OUT_NAME).elf
+HEX = $(OUT_DIR)/$(OUT_NAME).hex
+BIN = $(OUT_DIR)/$(OUT_NAME).bin
 
 # Standard cflags
 CFLAGS = -Wall \
@@ -27,7 +32,7 @@ CFLAGS = -Wall \
 		 -mfpu=fpv4-sp-d16 
 
 # Linker flags, here we specify the .ld script
-LDFLAGS = -T"STM32F303CBTx_FLASH.ld" -Wl,-Map,$(basename $(OUT_NAME)).map -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -specs=nosys.specs -specs=nano.specs -Wl,--gc-sections
+LDFLAGS = -T"STM32F303CBTx_FLASH.ld" -Wl,-Map,$(OUT_NAME).map -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -specs=nosys.specs -specs=nano.specs -Wl,--gc-sections
 # Assembler flags needed for startup_stm32f303xc.s
 ASFLAGS = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
 
@@ -74,7 +79,7 @@ OBJECTS = $(patsubst %.s,%.o,$(patsubst %.c,%.o,$(SOURCES)))
 # To generate an .elf we need to:
 # 	1. Compile all required .o files (for our code and the libraries used)
 #	2. Link all the object files into one .elf file using the liker script
-all: directories program
+all: directories elf hex bin
 
 # Create output directory(s) if it doesn't exist
 directories: $(OUT_DIR)
@@ -82,7 +87,15 @@ $(OUT_DIR):
 	$(MKDIR_P) $(OUT_DIR)
 
 # Program will just generate an .elf in the given output folder
-program: $(OUT_DIR)/$(OUT_NAME)
+elf: directories $(ELF)
+
+# Hex will generate an .hex from the .elf
+hex: $(ELF)
+	$(OBJCOPY) -O ihex $^ $(HEX)
+
+# Bin will generate an .bin from the .elf
+bin: $(ELF)
+	$(OBJCOPY) -O binary $^ $(BIN)
 
 # The main .elf file depends on the objects and on the linker file
 %.elf: $(OBJECTS) STM32F303CBTx_FLASH.ld
@@ -99,4 +112,4 @@ program: $(OUT_DIR)/$(OUT_NAME)
 # Clean as ice
 clean:
 	rm -rf $(OUT_DIR)
-	rm -f $(basename $(OUT_NAME)).map
+	rm -f $(OUT_NAME).map
