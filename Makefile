@@ -38,18 +38,27 @@ ASFLAGS = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
 
 # Debug flags. By default, debug is disabled
 CFLAGS_DEBUG = -g3 -Og -DDEBUG
+CFLAGS_RELEASE = -Os
 LDFLAGS_DEBUG =
+LDFLAGS_RELEASE =
 ASFLAGS_DEBUG = -g
+ASFLAGS_RELEASE =
 
 DEBUG ?= 0
 ifeq ($(DEBUG), 1)
     CFLAGS += $(CFLAGS_DEBUG)
+else
+	CFLAGS += $(CFLAGS_RELEASE)
 endif
 ifeq ($(DEBUG), 1)
     LDFLAGS += $(LDFLAGS_DEBUG)
+else
+	LDFLAGS += $(LDFLAGS_RELEASE)
 endif
 ifeq ($(DEBUG), 1)
     ASFLAGS += $(ASFLAGS_DEBUG)
+else
+	ASFLAGS += $(ASFLAGS_RELEASE)
 endif
 
 # Includes
@@ -109,6 +118,7 @@ bin: $(ELF)
 %.o: %.c
 	$(CC) -c $(CFLAGS) $< -o $(OUT_DIR)/$(notdir $@)
 
+# Create assembly file (.s)
 %.o: %.s
 	$(AS) $(ASFLAGS) -o $(OUT_DIR)/$(notdir $@) $<
 
