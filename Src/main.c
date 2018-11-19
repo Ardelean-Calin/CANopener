@@ -57,7 +57,7 @@
 #include "cobs.h"
 /* Private variables ---------------------------------------------------------*/
 static const char *cResponseOK = "Ardelean Calin";
-static TimerHandle_t xStatusTimer;
+static uint8_t ucStatusCount = 0;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
@@ -71,8 +71,7 @@ void vUSBTransmitTask(void *const pvParameters);
 void vCANRxEncoderTask(void *const pvParameters);
 void vCANTransmitTask(void *const pvParameters);
 void vCANReceiveTask(void *const pvParameters);
-// Timers
-void vStatusBlinkTimer(TimerHandle_t xTimer);
+void vStatusBlinkTask(void *const pvParameters);
 
 /**
   * @brief  The application entry point.
@@ -108,17 +107,8 @@ int main(void)
     xTaskCreate(vCANRxEncoderTask, "CAN_RX_ENCODER", 64, NULL, 2, NULL);
     xTaskCreate(vCANTransmitTask, "CAN_TRANSMIT", 64, NULL, 2, NULL);
     xTaskCreate(vCANReceiveTask, "CAN_RECEIVE", 64, NULL, 1, NULL);
+    xTaskCreate(vStatusBlinkTask, "STATUS_TASK", 64, NULL, 1, NULL);
 
-    // Create status timer (software-timer)
-    xStatusTimer = xTimerCreate(
-        "Status_Timer",
-        pdMS_TO_TICKS(35),
-        pdTRUE,
-        /* The ID is used to store a count of the
-                     number of times the timer has expired, which
-                     is initialised to 0. */
-        (void *)0,
-        vStatusBlinkTimer);
 
     /* USER CODE BEGIN RTOS_QUEUES */
     xUSBReceiveQueue = xQueueCreate(1, USB_ENC_PACKET_SIZE);
@@ -150,8 +140,7 @@ void vUSBTransmitTask(void *const pvParameters)
     {
         xQueueReceive(xUSBTransmitQueue, &pxUSBTransmitFrame, portMAX_DELAY);
         // Blink Status LED 10 times
-        vTimerSetTimerID(xStatusTimer, (void *)0);
-        xTimerReset(xStatusTimer, 0U);
+        ucStatusCount = 10U;
 
         // Fill unused bytes with 0xFF
         if (pxUSBTransmitFrame->ucSize < USB_DEC_PACKET_SIZE)
@@ -187,9 +176,8 @@ void vUSBRxDecoderTask(void *const pvParameters)
     {
         // Wait forever for an item in the queue to come.
         xQueueReceive(xUSBReceiveQueue, pcEncodedUSBMessage, portMAX_DELAY);
-        // Blink status LED
-        vTimerSetTimerID(xStatusTimer, (void *)0);
-        xTimerReset(xStatusTimer, 0U);
+        // Blink status LED 10 times
+        ucStatusCount = 10U;
         // Decode the COBS-encoded data
         ucUnStuffData(pcEncodedUSBMessage, USB_ENC_PACKET_SIZE, pcDecodedUSBMessage);
 
@@ -326,36 +314,23 @@ void vCANReceiveTask(void *const pvParameters)
 }
 
 /*
- * Status LED Timer. Will blink the LED 10 times.
+ * Status LED Task. Will blink the LED 10 times.
  */
-void vStatusBlinkTimer(TimerHandle_t xTimer)
+void vStatusBlinkTask(void *const pvParameters)
 {
-    const uint32_t ulMaxExpiryCountBeforeStopping = 10;
-    uint32_t ulCount;
-    /* The number of times this timer has expired is saved as the
-    timer's ID.  Obtain the count. */
-    ulCount = (uint32_t)pvTimerGetTimerID(xTimer);
-
-    /* Increment the count, then test to see if the timer has expired
-    ulMaxExpiryCountBeforeStopping yet. */
-    ulCount++;
-
-    /* If the timer has expired 10 times then stop it from running. */
-    if (ulCount >= ulMaxExpiryCountBeforeStopping)
+    for (;;)
     {
-        /* Do not use a block time if calling a timer API function
-        from a timer callback function, as doing so could cause a
-        deadlock! */
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);
-        xTimerStop(xTimer, 0);
-    }
-    else
-    {
-        /* Store the incremented count back into the timer's ID field
-       so it can be read back again the next time this software timer
-       expires. */
-        HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_10);
-        vTimerSetTimerID(xTimer, (void *)ulCount);
+        if (ucStatusCount)
+        {
+            HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_10);
+            ucStatusCount--;
+        }
+        else 
+        {
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(35));
     }
 }
 
