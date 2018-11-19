@@ -114,5 +114,5 @@ bin: $(ELF)
 
 # Clean as ice
 clean:
-	rm -rf $(OUT_DIR)
+	rm -f $(OUT_DIR)/*
 	rm -f $(OUT_NAME).map
