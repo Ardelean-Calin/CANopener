@@ -103,11 +103,11 @@ int main(void)
     // vTraceEnable(TRC_START);
 
     // Create tasks
-    xTaskCreate(vUSBRxDecoderTask, "USB_RX_DECODER", 64, NULL, 3, NULL);
-    xTaskCreate(vUSBTransmitTask, "USB_TRANSMIT", 64, NULL, 3, NULL);
-    xTaskCreate(vCANRxEncoderTask, "CAN_RX_ENCODER", 64, NULL, 3, NULL);
-    xTaskCreate(vCANTransmitTask, "CAN_TRANSMIT", 64, NULL, 3, NULL);
-    xTaskCreate(vCANReceiveTask, "CAN_RECEIVE", 64, NULL, 2, NULL);
+    xTaskCreate(vUSBRxDecoderTask, "USB_RX_DECODER", 64, NULL, 2, NULL);
+    xTaskCreate(vUSBTransmitTask, "USB_TRANSMIT", 64, NULL, 2, NULL);
+    xTaskCreate(vCANRxEncoderTask, "CAN_RX_ENCODER", 64, NULL, 2, NULL);
+    xTaskCreate(vCANTransmitTask, "CAN_TRANSMIT", 64, NULL, 2, NULL);
+    xTaskCreate(vCANReceiveTask, "CAN_RECEIVE", 64, NULL, 1, NULL);
 
     // Create status timer (software-timer)
     xStatusTimer = xTimerCreate(
@@ -346,16 +346,16 @@ void vStatusBlinkTimer(TimerHandle_t xTimer)
         /* Do not use a block time if calling a timer API function
         from a timer callback function, as doing so could cause a
         deadlock! */
-        xTimerStop(xTimer, 0);
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);
+        xTimerStop(xTimer, 0);
     }
     else
     {
         /* Store the incremented count back into the timer's ID field
        so it can be read back again the next time this software timer
        expires. */
-        vTimerSetTimerID(xTimer, (void *)ulCount);
         HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_10);
+        vTimerSetTimerID(xTimer, (void *)ulCount);
     }
 }
 
