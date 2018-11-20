@@ -29,20 +29,18 @@ CFLAGS = -Wall \
 		 -mcpu=cortex-m4 \
 		 -mthumb \
 		 -mfloat-abi=hard \
-		 -mfpu=fpv4-sp-d16 \
-		 -fdata-sections \
-		 -ffunction-sections  # Separate code into different sections. - functions
+		 -mfpu=fpv4-sp-d16 
 
 # Linker flags, here we specify the .ld script
-LDFLAGS = -T"STM32F303CBTx_FLASH.ld" -Wl,--gc-sections,-Map,$(OUT_NAME).map -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -specs=nosys.specs -specs=nano.specs
+LDFLAGS = -T"STM32F303CBTx_FLASH.ld" -Wl,-Map,$(OUT_NAME).map -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -specs=nosys.specs -specs=nano.specs
 # Assembler flags needed for startup_stm32f303xc.s
 ASFLAGS = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
 
 # Debug flags. By default, debug is disabled
 CFLAGS_DEBUG = -g3 -Og -DDEBUG
-CFLAGS_RELEASE = -Os
+CFLAGS_RELEASE = -Os -fdata-sections -ffunction-sections # Separate code into different sections/functions
 LDFLAGS_DEBUG =
-LDFLAGS_RELEASE =
+LDFLAGS_RELEASE = -Wl,--gc-sections
 ASFLAGS_DEBUG = -g
 ASFLAGS_RELEASE =
 
