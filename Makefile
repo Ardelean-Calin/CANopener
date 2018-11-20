@@ -29,7 +29,9 @@ CFLAGS = -Wall \
 		 -mcpu=cortex-m4 \
 		 -mthumb \
 		 -mfloat-abi=hard \
-		 -mfpu=fpv4-sp-d16 
+		 -mfpu=fpv4-sp-d16 \
+		 -fdata-sections \  # Separate code into different sections - data
+		 -ffunction-sections  # Separate code into different sections. - functions
 
 # Linker flags, here we specify the .ld script
 LDFLAGS = -T"STM32F303CBTx_FLASH.ld" -Wl,-Map,$(OUT_NAME).map -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -specs=nosys.specs -specs=nano.specs -Wl,--gc-sections
