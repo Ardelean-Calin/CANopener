@@ -10,7 +10,11 @@ rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
 CC = arm-none-eabi-gcc
 AS = arm-none-eabi-as
 LD = arm-none-eabi-gcc
+GDB = arm-none-eabi-gdb
 OBJCOPY = arm-none-eabi-objcopy
+
+# /dev/ttyS6 is equivalent to COM6 in WSL
+BMP_PORT ?= COM6
 
 # Output file name and location
 OUT_NAME = OpenCAN
@@ -121,6 +125,16 @@ bin: $(ELF)
 # Create assembly file (.s)
 %.o: %.s
 	$(AS) $(ASFLAGS) -o $(OUT_DIR)/$(notdir $@) $<
+
+# Flash command to copy program to device
+flash: OpenCAN.flash
+ 
+%.flash: $(ELF)
+	@printf "  BMP $(BMP_PORT) $(ELF) (flash)\n"
+	$(GDB) -nx --batch \
+	           -ex 'target extended-remote $(BMP_PORT)' \
+	           -x black_magic_probe_flash.scr \
+	           $(ELF)
 
 # Clean as ice
 clean:
