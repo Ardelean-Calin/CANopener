@@ -3,3 +3,4 @@ Debug/*
 build/*
 *.map
 .vscode/ipch
+.vscode/.cortex-debug.peripherals.state.json
