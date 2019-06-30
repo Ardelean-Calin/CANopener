@@ -2,3 +2,4 @@ Debug/*
 *.o
 build/*
 *.map
+.vscode/ipch
