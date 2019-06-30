@@ -165,6 +165,7 @@ void vUSBRxDecoderTask(void *const pvParameters)
     uint8_t ucIsExtended;
     uint32_t ucCanID;
     uint8_t ucDLC;
+    uint8_t ucRequestedBaudrate;
 
     CanTxMsgTypeDef *pxTXMessage;
     pxTXMessage = &xCANTransmitBuffer[0];
@@ -218,8 +219,18 @@ void vUSBRxDecoderTask(void *const pvParameters)
             xUSBTransmitFrame.ucSize = strlen(cResponseOK) + 1;
             xQueueSend(xUSBTransmitQueue, (void *)&pxUSBTransmitFrame, 0U);
             break;
-        // TODO: Change baudrate
         case RX_CAN_SET_BAUDRATE:
+            ucRequestedBaudrate = pcDecodedUSBMessage[1];
+            if (ucRequestedBaudrate < CAN_BAUDRATE_NOT_SUPPORTED)
+            {
+                /* Request enter initialisation */
+                SET_BIT(hcan.Instance->MCR, CAN_MCR_INRQ);
+                /* Set baudrate */
+                WRITE_REG(hcan.Instance->BTR, (uint32_t)(CAN_BTR_VALUES[ucRequestedBaudrate]));
+                /* Request leave initialisation */
+                CLEAR_BIT(hcan.Instance->MCR, CAN_MCR_INRQ);
+            }
+            break;
         default:
             break;
         }
@@ -419,6 +430,8 @@ static void MX_CAN_Init(void)
     #else
     hcan.Init.Mode = CAN_MODE_NORMAL;
     #endif
+    // We seem to be using a 36MHz PCLK1 clock (used by bxCAN)
+    // Default baudrate is set to 500kBaud
     hcan.Init.SJW = CAN_SJW_1TQ;
     hcan.Init.BS1 = CAN_BS1_6TQ;
     hcan.Init.BS2 = CAN_BS1_1TQ;
