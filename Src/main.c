@@ -226,7 +226,7 @@ void vUSBRxDecoderTask(void *const pvParameters)
                 /* Request enter initialisation */
                 SET_BIT(hcan.Instance->MCR, CAN_MCR_INRQ);
                 /* Set baudrate */
-                WRITE_REG(hcan.Instance->BTR, (uint32_t)(CAN_BTR_VALUES[ucRequestedBaudrate]));
+                MODIFY_REG(hcan.Instance->BTR, 0x00FFFFFF, (uint32_t)(CAN_BTR_VALUES[ucRequestedBaudrate]));
                 /* Request leave initialisation */
                 CLEAR_BIT(hcan.Instance->MCR, CAN_MCR_INRQ);
             }
