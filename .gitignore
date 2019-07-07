@@ -4,3 +4,4 @@ build/*
 *.map
 .vscode/ipch
 .vscode/.cortex-debug.peripherals.state.json
+__pycache__

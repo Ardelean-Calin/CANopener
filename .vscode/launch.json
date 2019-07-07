@@ -14,7 +14,7 @@
             "name": "Debug (Black Magic Probe)",
             "device": "STM32F303",
             "svdFile": "./STM32F303.svd",
-            "BMPGDBSerialPort": "COM6",
+            "BMPGDBSerialPort": "/dev/ttyS3",
             "targetId": 1,
             "runToMain": true,
         },

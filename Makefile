@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := all
-.PHONY: directories elf clean
+.PHONY: directories elf clean ping_bmp
 
 # User defined functions
 MKDIR_P = mkdir -p
@@ -13,8 +13,8 @@ LD = arm-none-eabi-gcc
 GDB = arm-none-eabi-gdb
 OBJCOPY = arm-none-eabi-objcopy
 
-# /dev/ttyS6 is equivalent to COM6 in WSL
-BMP_PORT ?= COM6
+# /dev/ttyS3 is equivalent to COM6 in WSL
+BMP_PORT ?= /dev/ttyS3
 
 # Output file name and location
 OUT_NAME = OpenCAN
@@ -41,7 +41,7 @@ LDFLAGS = -T"STM32F303CBTx_FLASH.ld" -Wl,-Map,$(OUT_NAME).map -mcpu=cortex-m4 -m
 ASFLAGS = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
 
 # Debug flags. By default, debug is disabled
-CFLAGS_DEBUG = -g3 -Og -DDEBUG
+CFLAGS_DEBUG = -g -Og -DDEBUG
 CFLAGS_RELEASE = -Os -fdata-sections -ffunction-sections # Separate code into different sections/functions
 LDFLAGS_DEBUG =
 LDFLAGS_RELEASE = -Wl,--gc-sections
@@ -80,11 +80,11 @@ CFLAGS += -IDrivers/CMSIS/Device/ST/STM32F3xx/Include
 CFLAGS += -ITracealyzerLib/include
 
 # These are all the sources that need to be compiled for ulterior linking
-SOURCES = $(call rwildcard,Drivers,*.c) \
+SOURCES = startup/startup_stm32f303xc.s \
+		  $(call rwildcard,Drivers,*.c) \
 		  $(call rwildcard,Middlewares,*.c) \
 		  $(call rwildcard,Src,*.c) \
-		  $(call rwildcard,TracealyzerLib,*.c) \
-		  startup/startup_stm32f303xc.s
+		  $(call rwildcard,TracealyzerLib,*.c)
 INCLUDES = $(call rwildcard,Inc,*.h) \
 		   $(call rwildcard,Middlewares,*.h)
 # And the equivalend object files to be created
@@ -114,27 +114,30 @@ bin: $(ELF)
 	$(OBJCOPY) -O binary $^ $(BIN)
 
 # The main .elf file depends on the objects and on the linker file
-%.elf: $(OBJECTS) STM32F303CBTx_FLASH.ld
-	$(LD) $(LDFLAGS) -o $@ $(wildcard $(OUT_DIR)/*.o) -lm
-	rm -f $(wildcard $(OUT_DIR)/*.o)
+%.elf: $(OBJECTS)
+	$(LD) $(LDFLAGS) -o $@ $^
 
 # Objects will be output in the build directory. Just leave $@ if we don't want that
 %.o: %.c
-	$(CC) -c $(CFLAGS) $< -o $(OUT_DIR)/$(notdir $@)
+	$(CC) -c $(CFLAGS) $< -o $@
 
 # Create assembly file (.s)
 %.o: %.s
-	$(AS) $(ASFLAGS) -o $(OUT_DIR)/$(notdir $@) $<
+	$(AS) $(ASFLAGS) -o $@ $<
 
 # Flash command to copy program to device
-flash: OpenCAN.flash
+flash: directories ping_bmp OpenCAN.flash
  
+# Unblocks the Black Magic Probe by connecting to it (only needed on WSL)
+ping_bmp:
+	./utils/unblock_serial $(BMP_PORT)
+	
 %.flash: $(ELF)
-	@printf "  BMP $(BMP_PORT) $(ELF) (flash)\n"
+	@printf "  BMP $(BMP_PORT) $^ (flash)\n"
 	$(GDB) -nx --batch \
 	           -ex 'target extended-remote $(BMP_PORT)' \
 	           -x black_magic_probe_flash.scr \
-	           $(ELF)
+	           $^
 
 # Clean as ice
 clean:
