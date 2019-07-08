@@ -105,7 +105,7 @@ int main(void)
     xTaskCreate(vUSBRxDecoderTask, "USB_RX_DECODER", 64, NULL, 2, NULL);
     xTaskCreate(vUSBTransmitTask, "USB_TRANSMIT", 64, NULL, 2, NULL);
     xTaskCreate(vCANRxEncoderTask, "CAN_RX_ENCODER", 64, NULL, 2, NULL);
-    xTaskCreate(vCANTransmitTask, "CAN_TRANSMIT", 64, NULL, 2, NULL);
+    xTaskCreate(vCANTransmitTask, "CAN_TRANSMIT", 64, NULL, 1, NULL);
     xTaskCreate(vCANReceiveTask, "CAN_RECEIVE", 64, NULL, 1, NULL);
     xTaskCreate(vStatusBlinkTask, "STATUS_TASK", 64, NULL, 1, NULL);
 
@@ -139,8 +139,6 @@ void vUSBTransmitTask(void *const pvParameters)
     for (;;)
     {
         xQueueReceive(xUSBTransmitQueue, &pxUSBTransmitFrame, portMAX_DELAY);
-        // Blink Status LED 10 times
-        ucStatusCount = 10U;
 
         // Fill unused bytes with 0xFF
         if (pxUSBTransmitFrame->ucSize < USB_DEC_PACKET_SIZE)
@@ -177,8 +175,6 @@ void vUSBRxDecoderTask(void *const pvParameters)
     {
         // Wait forever for an item in the queue to come.
         xQueueReceive(xUSBReceiveQueue, pcEncodedUSBMessage, portMAX_DELAY);
-        // Blink status LED 10 times
-        ucStatusCount = 10U;
         // Decode the COBS-encoded data
         ucUnStuffData(pcEncodedUSBMessage, USB_ENC_PACKET_SIZE, pcDecodedUSBMessage);
 
@@ -212,8 +208,8 @@ void vUSBRxDecoderTask(void *const pvParameters)
             memcpy(&pxTXMessage->Data[0], &pcDecodedUSBMessage[7], 8);
             xQueueSend(xCANTransmitQueue, (void *)&pxTXMessage, 0);
             break;
-        case RX_ACK_REQUEST:
-            xUSBTransmitFrame.pucData[0] = TX_ACK_SEND;
+        case RX_PING_REQ:
+            xUSBTransmitFrame.pucData[0] = TX_PONG_SEND;
             memcpy(xUSBTransmitFrame.pucData + 1, (void *)cResponseOK, strlen(cResponseOK));
 
             xUSBTransmitFrame.ucSize = strlen(cResponseOK) + 1;
@@ -296,6 +292,8 @@ void vCANTransmitTask(void *const pvParameters)
         hcan.pTxMsg = xCANTxMessage;
         // TODO What timeout should I put?
         HAL_CAN_Transmit(&hcan, 0);
+        // Blink status LED 10 times
+        ucStatusCount = 10U;
     }
 }
 
@@ -317,6 +315,8 @@ void vCANReceiveTask(void *const pvParameters)
         {
             // Read the message from the FIFO.
             HAL_CAN_Receive(&hcan, CAN_FIFO0, 0U);
+            // Blink status LED 10 times
+            ucStatusCount = 10U;
             // Send a pointer to the CAN RX message as payload since it's big
             // and would take a lot of time to just copy it.
             xQueueSend(xCANReceiveQueue, (void *)&xCANRxMessage, 0U);

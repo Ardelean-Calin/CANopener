@@ -13,7 +13,8 @@ LD = arm-none-eabi-gcc
 GDB = arm-none-eabi-gdb
 OBJCOPY = arm-none-eabi-objcopy
 
-# /dev/ttyS3 is equivalent to COM6 in WSL
+# /dev/ttyS3 is equivalent to COM3 in WSL
+# Can also be set via flag to make
 BMP_PORT ?= /dev/ttyS3
 
 # Output file name and location
