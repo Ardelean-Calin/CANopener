@@ -7,7 +7,7 @@
         {
             "type": "cortex-debug",
             "request": "launch",
-            "preLaunchTask": "BUILD_DEBUG",
+            "preLaunchTask": "FLASH_DEBUG",
             "servertype": "bmp",
             "cwd": "${workspaceRoot}",
             "executable": "./build/OpenCAN.elf",

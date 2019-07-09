@@ -4,6 +4,12 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "FLASH_DEBUG",
+            "type": "shell",
+            "command": "make flash DEBUG=1",
+            "dependsOn": ["BUILD_DEBUG"]
+        },
+        {
             "label": "BUILD_DEBUG",
             "type": "shell",
             "command": "make elf DEBUG=1",
