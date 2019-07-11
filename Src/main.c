@@ -99,12 +99,13 @@ int main(void)
     #endif
     MX_USB_DEVICE_Init();
 
+    // Enable this for Tracealyzer traces
     // vTraceEnable(TRC_START);
 
     // Create tasks
     xTaskCreate(vUSBRxDecoderTask, "USB_RX_DECODER", 64, NULL, 2, NULL);
-    xTaskCreate(vUSBTransmitTask, "USB_TRANSMIT", 64, NULL, 1, NULL);
-    xTaskCreate(vCANRxEncoderTask, "CAN_RX_ENCODER", 64, NULL, 1, NULL);
+    xTaskCreate(vUSBTransmitTask, "USB_TRANSMIT", 64, NULL, 2, NULL);
+    xTaskCreate(vCANRxEncoderTask, "CAN_RX_ENCODER", 64, NULL, 2, NULL);
     xTaskCreate(vCANTransmitTask, "CAN_TRANSMIT", 64, NULL, 2, NULL);
     xTaskCreate(vCANReceiveTask, "CAN_RECEIVE", 64, NULL, 1, NULL);
     xTaskCreate(vStatusBlinkTask, "STATUS_TASK", 64, NULL, 1, NULL);
