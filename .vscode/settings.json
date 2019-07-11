@@ -10,7 +10,8 @@
         "stm32f3xx_hal.h": "c",
         "stm32f3xx_hal_conf.h": "c",
         "main.h": "c",
-        "typedefs.h": "c"
+        "typedefs.h": "c",
+        "opencan_api.h": "c"
     },
     "workbench.colorTheme": "Slime",
     "workbench.colorCustomizations": {
