@@ -100,7 +100,9 @@ int main(void)
     MX_USB_DEVICE_Init();
 
     // Enable this for Tracealyzer traces
-    // vTraceEnable(TRC_START);
+    #ifdef DEBUG
+    vTraceEnable(TRC_START);
+    #endif
 
     // Create tasks
     xTaskCreate(vUSBRxDecoderTask, "USB_RX_DECODER", 64, NULL, 2, NULL);
