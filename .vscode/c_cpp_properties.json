@@ -19,7 +19,8 @@
                 "STM32F303xC",
                 "USE_HAL_DRIVER",
                 "__weak=__attribute__((weak))",
-                "__packed=__attribute__((__packed__))"
+                "__packed=__attribute__((__packed__))",
+                "DEBUG"
             ],
             "compilerPath": "arm-none-eabi-gcc.exe",
             "cStandard": "c11",
