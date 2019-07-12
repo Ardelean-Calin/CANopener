@@ -128,7 +128,7 @@ extern "C" {
  *
  * Default value is 0 (= include additional events).
  ******************************************************************************/
-#define TRC_CFG_SCHEDULING_ONLY 0
+#define TRC_CFG_SCHEDULING_ONLY 1
 
  /******************************************************************************
  * TRC_CFG_INCLUDE_MEMMANG_EVENTS
