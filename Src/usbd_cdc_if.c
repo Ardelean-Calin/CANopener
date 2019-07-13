@@ -305,6 +305,12 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t *pbuf, uint16_t length)
   */
 static int8_t CDC_Receive_FS(uint8_t *Buf, uint32_t *Len)
 {
+#ifdef DEBUG
+  vTraceStoreISRBegin(1U);
+#endif
+  // Spoiler alert: we ARE inside an ISR right now. Who knew?
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
 
@@ -327,16 +333,16 @@ static int8_t CDC_Receive_FS(uint8_t *Buf, uint32_t *Len)
              &pcRxRingBuffer[0],
              cRxRingBufferIndex + 1);
 
-      // Spoiler alert: we ARE inside an ISR right now. Who knew?
-      BaseType_t xHigherPriorityTaskWoken = pdFALSE;
       // Store a pointer to the RX structure in the queue
-      xQueueSendToFrontFromISR(xUSBReceiveQueue, (void *)pcRxEncodedData, &xHigherPriorityTaskWoken);
-      portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+      xQueueSendFromISR(xUSBReceiveQueue, (void *)pcRxEncodedData, &xHigherPriorityTaskWoken);
     }
 
     cRxRingBufferIndex = (cRxRingBufferIndex + 1) % USB_ENC_PACKET_SIZE;
   }
-
+#ifdef DEBUG
+  vTraceStoreISREnd(0);
+#endif
+  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
   return USBD_OK;
   /* USER CODE END 6 */
 }
