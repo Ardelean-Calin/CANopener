@@ -105,17 +105,17 @@ int main(void)
     #endif
 
     // Create tasks
-    xTaskCreate(vUSBRxDecoderTask, "USB_RX_DECODER", 64, NULL, 2, NULL);
+    xTaskCreate(vUSBRxDecoderTask, "USB_RX_DECODER", 64, NULL, 3, NULL);
     xTaskCreate(vUSBTransmitTask, "USB_TRANSMIT", 64, NULL, 2, NULL);
     xTaskCreate(vCANRxEncoderTask, "CAN_RX_ENCODER", 64, NULL, 2, NULL);
-    xTaskCreate(vCANTransmitTask, "CAN_TRANSMIT", 64, NULL, 2, NULL);
+    xTaskCreate(vCANTransmitTask, "CAN_TRANSMIT", 64, NULL, 3, NULL);
     xTaskCreate(vCANReceiveTask, "CAN_RECEIVE", 64, NULL, 1, NULL);
     xTaskCreate(vStatusBlinkTask, "STATUS_TASK", 64, NULL, 1, NULL);
 
 
     /* USER CODE BEGIN RTOS_QUEUES */
-    xUSBReceiveQueue = xQueueCreate(1, USB_ENC_PACKET_SIZE);
-    xUSBTransmitQueue = xQueueCreate(1, sizeof(xUSBTxFrame_t *));
+    xUSBReceiveQueue = xQueueCreate(5, USB_ENC_PACKET_SIZE);
+    xUSBTransmitQueue = xQueueCreate(5, sizeof(xUSBTxFrame_t *));
     xCANReceiveQueue = xQueueCreate(CAN_RX_BUFFER_SIZE, sizeof(CanRxMsgTypeDef *));
     xCANTransmitQueue = xQueueCreate(CAN_TX_BUFFER_SIZE, sizeof(CanTxMsgTypeDef *));
     // Add queues to registry
