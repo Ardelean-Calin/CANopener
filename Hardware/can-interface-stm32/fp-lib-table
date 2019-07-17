@@ -1,0 +1,4 @@
+(fp_lib_table
+  (lib (name can-interface-stm32)(type KiCad)(uri "C:/Users/Ardelean Calin/OneDrive/Hardware & Programming/can-interface-stm32")(options "")(descr ""))
+  (lib (name library)(type KiCad)(uri ${KIPRJMOD}/library)(options "")(descr ""))
+)
